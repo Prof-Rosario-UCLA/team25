@@ -1,0 +1,14 @@
+runtime: nodejs20
+
+instance_class: F1
+service: server
+
+env_variables:
+  NODE_ENV: 'production'
+  # Use Google Cloud Secret Manager for secrets
+
+# Network settings
+handlers:
+  - url: /.*
+    script: auto
+    secure: always
