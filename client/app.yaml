@@ -2,7 +2,7 @@ runtime: nodejs20
 
 instance_class: F1
 
-# service: client
+service: client
 
 automatic_scaling:
   max_instances: 3 
