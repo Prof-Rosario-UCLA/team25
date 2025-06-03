@@ -59,6 +59,12 @@ jobs:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
           project_id: ${{ secrets.GCP_PROJECT }}
 
+        # Add this to your GitHub workflow after authentication
+      - name: Set up Secret Manager
+        run: |
+          gcloud secrets versions access latest --secret="mongodb-uri" > mongodb-uri.txt
+          echo "MONGO_URI=$(cat mongodb-uri.txt)" >> server/.env
+
       # Deploy client to GAE
       - name: Deploy client to App Engine
         id: deploy-client
