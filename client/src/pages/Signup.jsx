@@ -34,7 +34,6 @@ const Signup = () => {
                 className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" 
                 required 
               />
-              <small className="text-gray-500 mt-1 block">We'll never share your email with anyone else.</small>
             </div>
           </fieldset>
           
@@ -116,7 +115,7 @@ const Signup = () => {
         </ul>
         
         <div className="mt-6 bg-white p-4 rounded-lg border border-green-100">
-          <h3 className="font-medium text-lg mb-2">JOIN JOIN JOIN JOIN JOIN JOIN JOIN JOIN JOIN JOIN</h3>
+          <h3 className="font-medium text-lg mb-2">When one player names an animal, the next has to name one starting with the letter the previous ended with</h3>
         </div>
       </aside>
     </main>

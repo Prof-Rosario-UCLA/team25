@@ -7,7 +7,7 @@ const Home = () => {
       <section className="text-center max-w-3xl mx-auto">
         <header className="mb-12">
           <h1 className="text-5xl md:text-6xl font-bold text-green-800 mb-6">LoopZoo</h1>
-          <p className="text-xl text-gray-700 mb-8">Challenge your knowledge and compete with friends in real-time trivia!</p>
+          <p className="text-xl text-gray-700 mb-8">Try to chain as many animals as possible!</p>
         </header>
         
         <div className="space-y-4 md:space-y-0 md:space-x-4 md:flex md:justify-center">
@@ -27,7 +27,7 @@ const Home = () => {
         </div>
         
         <footer className="mt-16 text-gray-600">
-          <p className="text-sm">© 2025 InQuizitive. All rights reserved.</p>
+          <p className="text-sm">© 2025 LoopZoo. All rights reserved.</p>
         </footer>
       </section>
     </main>
