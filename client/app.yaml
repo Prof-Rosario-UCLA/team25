@@ -5,17 +5,17 @@ service: client
 
 handlers:
   - url: /static
-    static_dir: dist/static
+    static_dir: static
     secure: always
 
   - url: /(.*\.(json|ico|js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))$
-    static_files: dist/\1
-    upload: dist/.*\.(json|ico|js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$
+    static_files: \1
+    upload: .*\.(json|ico|js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$
     secure: always
 
   - url: /.*
-    static_files: dist/index.html
-    upload: dist/index.html
+    static_files: index.html
+    upload: index.html
     secure: always
 
 env_variables:
