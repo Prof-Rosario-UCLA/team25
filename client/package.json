@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "postbuild": "cp app.yaml dist/",
     "lint": "eslint .",
     "preview": "vite preview"
   },

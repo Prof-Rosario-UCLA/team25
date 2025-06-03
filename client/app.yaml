@@ -1,0 +1,22 @@
+runtime: nodejs20
+
+instance_class: F1
+service: client
+
+handlers:
+  - url: /static
+    static_dir: dist/static
+    secure: always
+
+  - url: /(.*\.(json|ico|js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))$
+    static_files: dist/\1
+    upload: dist/.*\.(json|ico|js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$
+    secure: always
+
+  - url: /.*
+    static_files: dist/index.html
+    upload: dist/index.html
+    secure: always
+
+env_variables:
+  NODE_ENV: 'production'
