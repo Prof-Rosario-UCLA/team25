@@ -16,11 +16,13 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Node.js
+      # Setup Node.js for client
+      - name: Set up Node.js for client
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: './client/package-lock.json'
 
       # Client build
       - name: Install client dependencies
@@ -31,10 +33,23 @@ jobs:
         run: npm run build
         working-directory: ./client
 
+      # Setup Node.js for server
+      - name: Set up Node.js for server
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './server/package-lock.json'
+
       # Server build
       - name: Install server dependencies
         run: npm ci
         working-directory: ./server
+
+      # Optional - run server tests
+      # - name: Test server
+      #   run: npm test
+      #   working-directory: ./server
 
       # Setup Google Cloud Auth
       - name: Auth with Google Cloud
@@ -49,7 +64,7 @@ jobs:
         id: deploy-client
         uses: google-github-actions/deploy-appengine@v2
         with:
-          working_directory: ./client
+          working_directory: ./client/dist
           deliverables: app.yaml
           project_id: ${{ secrets.GCP_PROJECT }}
 
