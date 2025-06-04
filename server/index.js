@@ -1,13 +1,15 @@
 import express from 'express';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser';
+import cors from 'cors';
+import authRouter, { authenticateToken } from './routes/auth.js';
 
 // Load environment variables
 dotenv.config();
 
 const app = express();
-const PORT = process.env.PORT || 5000;
-const router = express.Router();
+const PORT = process.env.PORT || 3000;
 
 // Connect to MongoDB
 const MONGO_URI = process.env.MONGO_URI || 'fail';
@@ -19,11 +21,26 @@ mongoose.connect(MONGO_URI)
     process.exit(1);
   });
 
+// Middleware
 app.use(express.json());
+app.use(cookieParser());
+
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  credentials: true, // Allow cookies
+}));
 
 // Root route
 app.get('/', (req, res) => {
   res.send('Server is running!');
+});
+
+// Use auth routes
+app.use('/api/auth', authRouter);
+
+// Protected route example
+app.get('/api/protected', authenticateToken, (req, res) => {
+  res.json({ message: 'This is protected data.', userId: req.user.id });
 });
 
 // Start the server
