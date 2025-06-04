@@ -1,7 +1,41 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, {useEffect, useState} from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Home = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/check`, {
+          method: 'GET',
+          credentials: 'include', // Important for cookies
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.authenticated) {
+            navigate('/lobby'); // Redirect to lobby if authenticated
+          }
+        }
+      } catch (error) {
+        console.error('Error checking authentication:', error);
+      } finally {
+        setLoading(false);
+      }
+    }
+    checkAuth();
+  }, []);
+
+  if (loading) {
+    return (
+      <main className="flex items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+        <div className="text-green-800 text-2xl">Loading...</div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100 p-4">
       <section className="text-center max-w-3xl mx-auto">

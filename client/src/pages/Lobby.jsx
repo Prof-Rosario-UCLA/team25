@@ -1,8 +1,47 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 import { useNavigate } from 'react-router-dom';
 
 const Lobby = () => {
     const navigate = useNavigate();
+
+    const [loading, setLoading] = useState(true);
+      
+    useEffect(() => {
+    const checkAuth = async () => {
+        try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/check`, {
+            method: 'GET',
+            credentials: 'include', // Important for cookies
+        });
+        
+        // If response is not OK or user is not authenticated, redirect to home
+        if (!response.ok) {
+            navigate('/'); // Redirect to home if not authenticated
+            return;
+        }
+        
+        const data = await response.json();
+        if (!data.authenticated) {
+            navigate('/'); // Redirect to home if not authenticated
+        }
+        } catch (error) {
+        console.error('Error checking authentication:', error);
+        navigate('/'); // Redirect on error as well
+        } finally {
+        setLoading(false);
+        }
+    }
+    checkAuth();
+    }, []); // Add navigate to dependency array
+    
+      if (loading) {
+        return (
+          <main className="flex items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+            <div className="text-green-800 text-2xl">Loading...</div>
+          </main>
+        );
+      }
+    
 
     // Dummy room data
     const rooms = [
@@ -14,10 +53,6 @@ const Lobby = () => {
         { id: 6, code: 'ZETA99', players: 1 + (6 % 4) },
     ];
 
-    const handleReturn = () => {
-        navigate('/');
-    };
-
     const handleCreateRoom = () => {
         // For now, just navigate to a new room with a random ID
         navigate(`/room/${Math.floor(Math.random() * 10000)}`);
@@ -28,16 +63,36 @@ const Lobby = () => {
         navigate(`/room/${roomCode}`);
     };
 
+    const handleLogout = () => {
+        fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
+            method: 'POST',
+            credentials: 'include', // Important for cookies
+        })
+            .then(response => {
+            if (response.ok) {
+                // Clear any local state
+                // For example, if you're using context or state management:
+                // setUser(null);
+                
+                // Redirect to login or home page
+                navigate('/');
+            }
+            })
+            .catch(error => {
+            console.error('Error during logout:', error);
+            });
+    };
+
     return (
         <main className="min-h-screen bg-gradient-to-b from-green-50 to-green-100 p-4 md:p-6 lg:p-8">
             {/* Header */}
             <header className="flex justify-between items-center mb-8">
                 <h1 className="text-3xl font-bold text-green-800">Game Lobby</h1>
                 <button
-                    onClick={handleReturn}
+                    onClick={handleLogout}
                     className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg transition-colors"
                 >
-                    Return to Home
+                    LogOut
                 </button>
             </header>
 

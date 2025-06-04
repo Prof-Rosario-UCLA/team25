@@ -1,16 +1,91 @@
-import React from 'react';
-
+import React, {useEffect, useState} from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+// signup form
 const Signup = () => {
+
+    const navigate = useNavigate();
+
+    // handle form submission
+    const handleSubmit = (event) => {
+        event.preventDefault();
+        const username = event.target.username.value;
+        const password = event.target.password.value;
+        const confirmPassword = event.target.confirmPassword.value;
+        if (password.length < 8) {
+            alert("Password must be at least 8 characters long!");
+            return;
+        }
+        if (password !== confirmPassword) {
+            alert("Passwords do not match!");
+            return;
+        }
+    {   // fetch request
+    
+        fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ username, password }),
+        }).then(response => {
+            if (response.ok) {
+                alert("Account created successfully!");
+                navigate('/login'); // redirect to login page
+            } else {
+                response.json().then(data => {
+                    alert("An error occurred while creating the account.");
+                });
+            }
+        }).catch(error => {
+            console.error("Error during signup:", error);
+            alert("An error occurred while creating the account.");
+        });
+    }
+
+    }
+
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+    const checkAuth = async () => {
+        try {
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/check`, {
+            method: 'GET',
+            credentials: 'include', // Important for cookies
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            if (data.authenticated) {
+            navigate('/lobby'); // Redirect to lobby if authenticated
+            }
+        }
+        } catch (error) {
+        console.error('Error checking authentication:', error);
+        } finally {
+        setLoading(false);
+        }
+    }
+    checkAuth();
+    }, []);
+
+    if (loading) {
+    return (
+        <main className="flex items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+        <div className="text-green-800 text-2xl">Loading...</div>
+        </main>
+    );
+    }
+    
   return (
     <main className="max-w-7xl mx-auto p-4 md:p-6 lg:p-8 flex flex-col lg:flex-row lg:gap-8">
-      {/* Main signup form container - centered content */}
       <section className="bg-white rounded-lg shadow-md p-6 lg:p-8 w-full lg:w-2/3 flex flex-col items-center">
         <header className="text-center w-full max-w-md">
           <h1 className="text-3xl font-bold mb-6">Create an Account</h1>
           <p className="text-gray-600 mb-8">Join LoopZoo to test your animal knowledge!</p>
         </header>
         
-        <form className="signup-form w-full max-w-md">
+        <form className="signup-form w-full max-w-md" onSubmit={handleSubmit}>
           <fieldset className="mb-6">
             <legend className="sr-only">Personal Information</legend>
             
@@ -20,17 +95,6 @@ const Signup = () => {
                 type="text" 
                 id="username" 
                 name="username"
-                className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" 
-                required 
-              />
-            </div>
-            
-            <div className="form-group mb-4">
-              <label htmlFor="email" className="block mb-2 font-medium">Email Address</label>
-              <input 
-                type="email" 
-                id="email" 
-                name="email"
                 className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" 
                 required 
               />
@@ -63,13 +127,6 @@ const Signup = () => {
               />
             </div>
           </fieldset>
-          
-          <div className="form-group mb-6">
-            <label className="flex items-start">
-              <input type="checkbox" name="terms" className="mt-0.5 mr-2" required />
-              <span className="text-sm">I agree to the <a href="/terms" className="text-green-600 hover:underline">Terms of Service</a> and <a href="/privacy" className="text-green-600 hover:underline">Privacy Policy</a>.</span>
-            </label>
-          </div>
           
           <button 
             type="submit" 
