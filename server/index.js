@@ -4,6 +4,8 @@ import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import authRouter, { authenticateToken } from './routes/auth.js';
+import animalRoutes from './routes/animals.js';
+
 
 // Load environment variables
 dotenv.config();
@@ -37,6 +39,9 @@ app.get('/', (req, res) => {
 
 // Use auth routes
 app.use('/api/auth', authRouter);
+
+// Use animal routes
+app.use('/api/animals', animalRoutes);
 
 // Protected route example
 app.get('/api/protected', authenticateToken, (req, res) => {
