@@ -15,11 +15,23 @@ const Signup = () => {
             alert("Password must be at least 8 characters long!");
             return;
         }
+
+        const hasUpperCase = /[A-Z]/.test(password);
+        if (!hasUpperCase) {
+            alert("Password must contain at least one uppercase letter!");
+            return;
+        }
+
         if (password !== confirmPassword) {
             alert("Passwords do not match!");
             return;
         }
-    {   // fetch request
+
+        const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
+        if (!hasSpecialChar) {
+            alert("Password must contain at least one special character!");
+            return;
+        }
     
         fetch(`${import.meta.env.VITE_API_URL}/api/auth/register`, {
             method: 'POST',
@@ -33,16 +45,14 @@ const Signup = () => {
                 navigate('/login'); // redirect to login page
             } else {
                 response.json().then(data => {
-                    alert("An error occurred while creating the account.");
+                    alert("This username already exists!");
                 });
             }
         }).catch(error => {
             console.error("Error during signup:", error);
             alert("An error occurred while creating the account.");
         });
-    }
-
-    }
+      };
 
     const [loading, setLoading] = useState(true);
 
@@ -113,7 +123,7 @@ const Signup = () => {
                 className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" 
                 required 
               />
-              <small className="text-gray-500 mt-1 block">Must be at least 8 characters long.</small>
+              <small className="text-gray-500 mt-1 block">Must be at least 8 characters long and include a capital letter and special character.</small>
             </div>
             
             <div className="form-group mb-4">
