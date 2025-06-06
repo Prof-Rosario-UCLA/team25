@@ -5,6 +5,9 @@ const Lobby = () => {
     const navigate = useNavigate();
 
     const [loading, setLoading] = useState(true);
+    const [rooms, setRooms] = useState([]);
+    const [joinCode, setJoinCode] = useState('');
+    
       
     useEffect(() => {
     const checkAuth = async () => {
@@ -43,25 +46,43 @@ const Lobby = () => {
       }
     
 
-    // Dummy room data
-    const rooms = [
-        { id: 1, code: 'ALPHA1', players: 1 + (1 % 4) },
-        { id: 2, code: 'BETA23', players: 1 + (2 % 4) },
-        { id: 3, code: 'GAMMA7', players: 1 + (3 % 4) },
-        { id: 4, code: 'DELTA9', players: 1 + (4 % 4) },
-        { id: 5, code: 'EPSI42', players: 1 + (5 % 4) },
-        { id: 6, code: 'ZETA99', players: 1 + (6 % 4) },
-    ];
 
-    const handleCreateRoom = () => {
-        // For now, just navigate to a new room with a random ID
-        navigate(`/room/${Math.floor(Math.random() * 10000)}`);
+    const handleCreateRoom = async () => {
+        try {
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/rooms/create`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+          });
+      
+          const data = await res.json();
+          navigate(`/room/${data.roomCode}`);
+        } catch (err) {
+          console.error('Failed to create room:', err);
+        }
     };
 
-    const handleJoinRoom = (roomCode) => {
-        // For now, just navigate to the room with the given code
-        navigate(`/room/${roomCode}`);
+    const handleJoinRoom = async (roomCode) => {
+        try {
+          const socketId = localStorage.getItem('socketId'); 
+          const username = localStorage.getItem('username'); 
+      
+          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/rooms/${roomCode}/join`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ username, socketId }),
+          });
+      
+          if (!res.ok) {
+            alert('Failed to join room. Make sure the code is valid.');
+            return;
+          }
+      
+          navigate(`/room/${roomCode}`);
+        } catch (err) {
+          console.error('Failed to join room:', err);
+        }
     };
+      
 
     const handleLogout = () => {
         fetch(`${import.meta.env.VITE_API_URL}/api/auth/logout`, {
@@ -117,10 +138,13 @@ const Lobby = () => {
                         <div className="flex gap-2">
                             <input
                                 type="text"
+                                value={joinCode}
+                                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
                                 placeholder="Enter room code"
                                 className="flex-grow border border-gray-300 rounded-lg px-4 py-2 focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none"
                             />
                             <button
+                                onClick={() => handleJoinRoom(joinCode)}
                                 className="bg-green-600 hover:bg-green-700 text-white py-2 px-6 rounded-lg font-medium transition-colors shadow-md"
                             >
                                 Join

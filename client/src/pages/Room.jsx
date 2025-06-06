@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import { useParams } from 'react-router-dom';
 
 const Room = () => {
     const navigate = useNavigate();
+    const { roomCode } = useParams();
 
     const [currentAnimal, setCurrentAnimal] = useState(null);
     const [expectedStartLetter, setExpectedStartLetter] = useState(
@@ -160,7 +162,7 @@ const Room = () => {
             <div className="absolute top-4 right-4 flex items-center gap-4">
                 <div className="bg-white px-4 py-2 rounded-lg shadow-md">
                     <span className="text-gray-500 text-sm mr-2">Room Code:</span>
-                    <span className="font-bold">XYZQ42</span>
+                    <span className="font-bold">{roomCode}</span>
                 </div>
                 <button 
                     onClick={handleLeaveRoom}
