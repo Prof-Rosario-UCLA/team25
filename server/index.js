@@ -73,7 +73,6 @@ app.get('/api/protected', authenticateToken, (req, res) => {
   res.json({ message: 'This is protected data.', userId: req.user.id });
 });
 
-
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`);
 
@@ -138,6 +137,21 @@ io.on('connection', (socket) => {
     }
   });
 
+  async function checkAndHandleGameOver(roomCode, io) {
+    const room = await Room.findOne({ code: roomCode });
+  
+    if (!room || !room.gameStarted) return;
+  
+    const activePlayers = room.players.filter(player => !player.eliminated);
+  
+    if (activePlayers.length === 1) {
+        const winner = activePlayers[0];
+        console.log(`Winner determined: ${winner.username}`);
+  
+        io.to(roomCode).emit('game-over', { winner });
+    }
+  }
+
   socket.on('leave-room', async (roomCode) => {
     try {
       // If roomCode is an object, extract the roomCode property
@@ -157,6 +171,10 @@ io.on('connection', (socket) => {
       
       // Broadcast updated player list to all clients in the room
       io.to(actualRoomCode).emit('player-left', { players: updatedRoom.players });
+
+      // Check for auto-win
+      await checkAndHandleGameOver(actualRoomCode, io);
+
     } catch (error) {
       console.error('Error in leave-room handler:', error);
     }
@@ -275,6 +293,7 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`Client disconnected: ${socket.id}`);
   });
+  
 });
 
 

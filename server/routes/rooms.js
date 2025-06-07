@@ -12,7 +12,7 @@ router.post('/create', async (req, res) => {
   res.json({ roomCode });
 });
 
-// Replace your join route with this:
+// POST /api/:room/join
 router.post('/:roomCode/join', async (req, res) => {
   const { username, socketId } = req.body;
   const room = await Room.findOne({ code: req.params.roomCode });
@@ -30,6 +30,22 @@ router.post('/:roomCode/join', async (req, res) => {
   }
   
   res.json({ success: true });
+});
+
+// GET /api/rooms
+router.get('/', async (req, res) => {
+  try {
+      const rooms = await Room.find({ gameStarted: false });
+      const formattedRooms = rooms.map(room => ({
+          id: room._id,
+          code: room.code,
+          players: room.players.length,
+      }));
+      res.json(formattedRooms);
+  } catch (err) {
+      console.error('Error fetching rooms:', err);
+      res.status(500).json({ error: 'Failed to fetch rooms' });
+  }
 });
 
 // GET /api/rooms/:roomCode
