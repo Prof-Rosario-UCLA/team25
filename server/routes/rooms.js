@@ -12,14 +12,23 @@ router.post('/create', async (req, res) => {
   res.json({ roomCode });
 });
 
-// POST /api/rooms/:roomCode/join
+// Replace your join route with this:
 router.post('/:roomCode/join', async (req, res) => {
   const { username, socketId } = req.body;
   const room = await Room.findOne({ code: req.params.roomCode });
   if (!room) return res.status(404).json({ message: 'Room not found' });
 
-  room.players.push({ username, socketId });
-  await room.save();
+  // If this player is already in the room, don't add them again
+  const existingPlayer = room.players.find(p => 
+    (socketId && p.socketId === socketId) || 
+    (username && p.username === username)
+  );
+  
+  if (!existingPlayer) {
+    room.players.push({ username, socketId });
+    await room.save();
+  }
+  
   res.json({ success: true });
 });
 
@@ -46,9 +55,25 @@ router.post('/:roomCode/start', async (req, res) => {
   const room = await Room.findOne({ code: req.params.roomCode });
   if (!room) return res.status(404).json({ message: 'Room not found' });
 
+  // Require at least 2 players to start the game
+  if (room.players.length < 2) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'At least 2 players are required to start the game' 
+    });
+  }
+
+  // Generate random starting letter
+  const startLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+  
   room.gameStarted = true;
-  room.expectedStartLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+  room.expectedStartLetter = startLetter;
   await room.save();
+
+  // Use the io object to emit to all clients in the room
+  req.app.get('io').to(req.params.roomCode).emit('game-started', { 
+    expectedStartLetter: startLetter 
+  });
 
   res.json({ success: true });
 });
@@ -56,28 +81,48 @@ router.post('/:roomCode/start', async (req, res) => {
 // POST /api/rooms/:roomCode/submit-animal
 router.post('/:roomCode/submit-animal', async (req, res) => {
   const { animal } = req.body;
-  const room = await Room.findOne({ code: req.params.roomCode });
-  if (!room) return res.status(404).json({ message: 'Room not found' });
+  
+  try {
+    // Find the room
+    const room = await Room.findOne({ code: req.params.roomCode });
+    if (!room) return res.status(404).json({ message: 'Room not found' });
 
-  room.currentAnimal = animal;
-  room.expectedStartLetter = animal.slice(-1).toUpperCase();
-  room.currentTurnIndex = (room.currentTurnIndex + 1) % room.players.length;
-  await room.save();
+    // Only update the animal and letter
+    // The socket handler will handle turn changes
+    await Room.findOneAndUpdate(
+      { code: req.params.roomCode },
+      { 
+        currentAnimal: animal,
+        expectedStartLetter: animal.slice(-1).toUpperCase()
+      }
+    );
 
-  res.json({ success: true });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error submitting animal:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 // POST /api/rooms/:roomCode/eliminate
 router.post('/:roomCode/eliminate', async (req, res) => {
   const { socketId } = req.body;
-  const room = await Room.findOne({ code: req.params.roomCode });
-  if (!room) return res.status(404).json({ message: 'Room not found' });
+  
+  try {
+    const room = await Room.findOne({ code: req.params.roomCode });
+    if (!room) return res.status(404).json({ message: 'Room not found' });
 
-  const player = room.players.find(p => p.socketId === socketId);
-  if (player) player.isEliminated = true;
-  await room.save();
+    // Use findOneAndUpdate to avoid version conflicts
+    await Room.findOneAndUpdate(
+      { code: req.params.roomCode, "players.socketId": socketId },
+      { $set: { "players.$.isEliminated": true } }
+    );
 
-  res.json({ success: true });
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error eliminating player:', error);
+    res.status(500).json({ message: 'Server error' });
+  }
 });
 
 export default router;

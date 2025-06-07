@@ -1,6 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+
+
 const Login = () => {
     const navigate = useNavigate();
 
@@ -27,6 +29,7 @@ const Login = () => {
         })
         .then(response => {
             if (response.ok) {
+                localStorage.setItem('username', username); // Store username in local storage
                 navigate('/lobby'); // Redirect to lobby on success
             } else {
                 response.json().then(data => {

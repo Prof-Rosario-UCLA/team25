@@ -2,7 +2,9 @@ import mongoose from 'mongoose';
 
 const playerSchema = new mongoose.Schema({
   socketId: String,
+  persistentUserId: String,
   username: String,
+  isHost: { type: Boolean, default: false },
   isEliminated: { type: Boolean, default: false },
 });
 

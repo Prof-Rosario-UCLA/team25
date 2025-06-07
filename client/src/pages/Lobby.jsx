@@ -61,25 +61,13 @@ const Lobby = () => {
         }
     };
 
+    // Replace with this simpler function:
     const handleJoinRoom = async (roomCode) => {
         try {
-          const socketId = localStorage.getItem('socketId'); 
-          const username = localStorage.getItem('username'); 
-      
-          const res = await fetch(`${import.meta.env.VITE_API_URL}/api/rooms/${roomCode}/join`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ username, socketId }),
-          });
-      
-          if (!res.ok) {
-            alert('Failed to join room. Make sure the code is valid.');
-            return;
-          }
-      
-          navigate(`/room/${roomCode}`);
+            // Just navigate to the room, Socket.IO will handle joining
+            navigate(`/room/${roomCode}`);
         } catch (err) {
-          console.error('Failed to join room:', err);
+            console.error('Failed to join room:', err);
         }
     };
       
@@ -91,10 +79,8 @@ const Lobby = () => {
         })
             .then(response => {
             if (response.ok) {
-                // Clear any local state
-                // For example, if you're using context or state management:
-                // setUser(null);
-                
+                // Clear local storage
+                localStorage.removeItem('username');
                 // Redirect to login or home page
                 navigate('/');
             }
