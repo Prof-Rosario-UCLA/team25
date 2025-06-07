@@ -175,6 +175,11 @@ io.on('connection', (socket) => {
       // Check for auto-win
       await checkAndHandleGameOver(actualRoomCode, io);
 
+      if (updatedRoom.players.length === 0) {
+        await Room.deleteOne({ code: actualRoomCode });
+        console.log(`Room ${actualRoomCode} deleted because it's now empty.`);
+      }
+
     } catch (error) {
       console.error('Error in leave-room handler:', error);
     }
