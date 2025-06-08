@@ -66,6 +66,13 @@ jobs:
         run: npm run build
         working-directory: ./client
 
+      - name: Inspect built client/dist/index.html
+        run: |
+          echo "Contents of client/dist/index.html:"
+          cat client/dist/index.html || echo "client/dist/index.html not found"
+          echo "Listing client/dist directory:"
+          ls -R client/dist
+
       # Setup Node.js for server
       - name: Set up Node.js for server
         uses: actions/setup-node@v4
