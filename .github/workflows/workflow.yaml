@@ -24,6 +24,28 @@ jobs:
           cache: 'npm'
           cache-dependency-path: './client/package-lock.json'
 
+      # Auth first for secret access
+      - name: Auth with Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT }}
+
+      # Set up environment variables for both client and server
+      - name: Set up environment variables
+        run: |
+          # Get MongoDB URI from Secret Manager
+          gcloud secrets versions access latest --secret="mongodb-uri" > mongodb-uri.txt
+          
+          # Set up server environment variables
+          echo "MONGO_URI=$(cat mongodb-uri.txt)" > server/.env
+          echo "PORT=8080" >> server/.env
+          echo "CLIENT_URL=https://client-dot-cs144-25s-hakob3215.uw.r.appspot.com" >> server/.env
+          
+          # Set up client environment variables
+          echo "VITE_API_URL=https://server-dot-cs144-25s-hakob3215.uw.r.appspot.com" > client/.env.production
+
       # Client build
       - name: Install client dependencies
         run: npm ci
@@ -45,25 +67,6 @@ jobs:
       - name: Install server dependencies
         run: npm ci
         working-directory: ./server
-
-      # Optional - run server tests
-      # - name: Test server
-      #   run: npm test
-      #   working-directory: ./server
-
-      # Setup Google Cloud Auth
-      - name: Auth with Google Cloud
-        id: auth
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
-          project_id: ${{ secrets.GCP_PROJECT }}
-
-        # Add this to your GitHub workflow after authentication
-      - name: Set up Secret Manager
-        run: |
-          gcloud secrets versions access latest --secret="mongodb-uri" > mongodb-uri.txt
-          echo "MONGO_URI=$(cat mongodb-uri.txt)" >> server/.env
 
       # Deploy client to GAE
       - name: Deploy client to App Engine

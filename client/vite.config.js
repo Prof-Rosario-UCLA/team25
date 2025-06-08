@@ -1,14 +1,21 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
-import { VitePWA } from 'vite-plugin-pwa';
+import { nodePolyfills } from 'vite-plugin-node-polyfills'; // From hakob-game-routes
+import { VitePWA } from 'vite-plugin-pwa'; // From ethan-game-routes
 
-// https://vite.dev/config/
+// https://vitejs.dev/config/
 export default defineConfig({
   plugins: [
     react(),
     tailwindcss(),
-    VitePWA({
+    nodePolyfills({ // Configuration from hakob-game-routes
+      protocolImports: true, //
+      global: true,        // Polyfill `global`
+      process: true,       // Polyfill `process`
+      buffer: true,        // Polyfill `Buffer`
+    }),
+    VitePWA({ // Configuration from ethan-game-routes
       registerType: 'autoUpdate',
       includeAssets: [
         'favicon.ico',
