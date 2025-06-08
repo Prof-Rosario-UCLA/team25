@@ -91,8 +91,8 @@ jobs:
         id: deploy-client
         uses: google-github-actions/deploy-appengine@v2
         with:
-          working_directory: ./client # Deploy from the client directory where app.yaml is
-          deliverables: app.yaml # Assuming app.yaml is in ./client
+          working_directory: ./client/dist # <-- CHANGE THIS
+          deliverables: app.yaml # This will now use client/dist/app.yaml
           project_id: ${{ secrets.GCP_PROJECT }}
           # Ensure your client/app.yaml correctly points to the 'dist' folder for static assets if needed
           # or that your build process places app.yaml in client/dist
