@@ -10,8 +10,14 @@ import VideoStream from '../components/VideoStream';
 const ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' }, // Added another Google STUN as a fallback
     { 
-      urls: 'turn:openrelay.metered.ca:80',
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp', // Try port 443 with TCP
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    { 
+      urls: 'turn:openrelay.metered.ca:3478', // Try standard TURN port
       username: 'openrelayproject',
       credential: 'openrelayproject'
     }
