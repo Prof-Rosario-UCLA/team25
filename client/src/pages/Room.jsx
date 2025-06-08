@@ -10,14 +10,25 @@ import VideoStream from '../components/VideoStream';
 const ICE_SERVERS = {
   iceServers: [
     { urls: 'stun:stun.l.google.com:19302' },
-    { urls: 'stun:stun1.l.google.com:19302' }, // Added another Google STUN as a fallback
-    { 
-      urls: 'turn:openrelay.metered.ca:443?transport=tcp', // Try port 443 with TCP
+    { urls: 'stun:stun1.l.google.com:19302' },
+    // Add OpenRelay's own STUN server
+    { urls: 'stun:openrelay.metered.ca:3478' },
+
+    // OpenRelay TURN server on port 3478 (typically UDP, but will try TCP if UDP fails)
+    {
+      urls: 'turn:openrelay.metered.ca:3478',
       username: 'openrelayproject',
       credential: 'openrelayproject'
     },
-    { 
-      urls: 'turn:openrelay.metered.ca:3478', // Try standard TURN port
+    // OpenRelay TURN server on port 443 (TCP)
+    {
+      urls: 'turn:openrelay.metered.ca:443?transport=tcp',
+      username: 'openrelayproject',
+      credential: 'openrelayproject'
+    },
+    // OpenRelay TURN server on port 80 (TCP) - less common but sometimes listed
+    {
+      urls: 'turn:openrelay.metered.ca:80?transport=tcp',
       username: 'openrelayproject',
       credential: 'openrelayproject'
     }
