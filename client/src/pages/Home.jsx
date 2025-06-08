@@ -1,11 +1,20 @@
 import React, {useEffect, useState} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+const COOKIE_CONSENT_KEY = 'cookieConsentAccepted';
+
 const Home = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
+  const [showCookieBanner, setShowCookieBanner] = useState(false);
   
   useEffect(() => {
+
+    const consent = localStorage.getItem(COOKIE_CONSENT_KEY);
+    if (!consent) {
+      setShowCookieBanner(true);
+    }
+
     const checkAuth = async () => {
       try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/check`, {
@@ -28,6 +37,11 @@ const Home = () => {
     checkAuth();
   }, []);
 
+  const handleAcceptCookies = () => {
+    localStorage.setItem(COOKIE_CONSENT_KEY, 'true');
+    setShowCookieBanner(false);
+  };
+
   if (loading) {
     return (
       <main className="flex items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
@@ -37,6 +51,7 @@ const Home = () => {
   }
 
   return (
+    <>
     <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100 p-4">
       <section className="text-center max-w-3xl mx-auto">
         <header className="mb-12">
@@ -65,6 +80,27 @@ const Home = () => {
         </footer>
       </section>
     </main>
+
+      {/* Cookie Consent Banner */}
+      {showCookieBanner && (
+        <div className="fixed bottom-0 left-0 right-0 bg-green-700 text-white p-4 flex flex-col md:flex-row items-center justify-between space-y-2 md:space-y-0 md:space-x-4 shadow-lg z-50">
+          <p className="text-sm md:text-base max-w-xl">
+            We use cookies to improve your experience. By continuing to use our site, you agree to our use of cookies and your rights.
+          </p>
+          <button
+            onClick={handleAcceptCookies}
+            className="bg-white text-green-700 font-semibold px-6 py-2 rounded hover:bg-green-100 transition"
+          >
+            Accept
+          </button>
+        </div>
+      )}
+    </>
+
+
+
+
+
   );
 };
 

@@ -74,7 +74,6 @@ app.get('/api/protected', authenticateToken, (req, res) => {
   res.json({ message: 'This is protected data.', userId: req.user.id });
 });
 
-
 io.on('connection', (socket) => {
   console.log(`Client connected: ${socket.id}`);
 
@@ -139,42 +138,110 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Updated leave-room handler with WebRTC cleanup
-  socket.on('leave-room', async (data) => { // Ensure data can be object or string
+  async function checkAndHandleGameOver(roomCodeToCheck, ioInstance) {
     try {
-      const roomCode = typeof data === 'object' ? data.roomCode : data;
-      if (!roomCode) {
-        console.error(`Leave-room event for ${socket.id} missing roomCode.`);
+      const room = await Room.findOne({ code: roomCodeToCheck });
+    
+      // Ensure room exists and game has started
+      if (!room || !room.gameStarted) {
+        // console.log(`Game over check for room ${roomCodeToCheck}: Room not found or game not started.`);
+        return;
+      }
+    
+      // Filter for active (not eliminated) players
+      // Ensuring consistency with 'isEliminated' field used elsewhere
+      const activePlayers = room.players.filter(player => !player.isEliminated);
+    
+      // Check if only one player remains and the game had multiple players initially
+      if (activePlayers.length === 1 && room.players.length > 1) {
+          const winner = activePlayers[0];
+          console.log(`Game over: Winner determined in room ${roomCodeToCheck}: ${winner.username}`);
+    
+          // Update the room with the winner
+          await Room.findOneAndUpdate(
+            { code: roomCodeToCheck },
+            { gameWinner: winner.socketId } // Store winner's socketId
+          );
+
+          // Emit a structured game-over event, consistent with player-eliminated handler
+          ioInstance.to(roomCodeToCheck).emit('game-over', { 
+            winner: {
+              socketId: winner.socketId,
+              username: winner.username,
+              isHost: winner.isHost // Assuming isHost is relevant for the client
+            }
+          });
+      } else {
+        // console.log(`Game over check for room ${roomCodeToCheck}: ${activePlayers.length} active players. No winner yet.`);
+      }
+    } catch (error) {
+      console.error(`Error in checkAndHandleGameOver for room ${roomCodeToCheck}:`, error);
+    }
+  }
+
+  // Merged 'leave-room' handler
+  socket.on('leave-room', async (data) => {
+    let currentRoomCode; // To store the processed room code
+    try {
+      // Determine roomCode (from hakob-game-routes, handles object or string)
+      // Added a null check for data if it's an object
+      if (typeof data === 'object' && data !== null && data.roomCode) {
+        currentRoomCode = data.roomCode;
+      } else if (typeof data === 'string') {
+        currentRoomCode = data;
+      }
+
+      if (!currentRoomCode) {
+        console.error(`Leave-room event for ${socket.id} missing a valid roomCode. Data received:`, data);
         return;
       }
       
-      socket.leave(roomCode);
-      console.log(`${socket.id} left room ${roomCode}`);
+      socket.leave(currentRoomCode);
+      console.log(`${socket.id} left room ${currentRoomCode}`);
       
-      // Remove this user from the webrtcReadyUsersByRoom list for that room
-      if (webrtcReadyUsersByRoom[roomCode]) {
-        webrtcReadyUsersByRoom[roomCode].delete(socket.id);
-        if (webrtcReadyUsersByRoom[roomCode].size === 0) {
-          delete webrtcReadyUsersByRoom[roomCode];
+      // WebRTC cleanup (from hakob-game-routes)
+      if (webrtcReadyUsersByRoom[currentRoomCode]) {
+        webrtcReadyUsersByRoom[currentRoomCode].delete(socket.id);
+        if (webrtcReadyUsersByRoom[currentRoomCode].size === 0) {
+          delete webrtcReadyUsersByRoom[currentRoomCode];
+          console.log(`Cleaned up empty webrtcReadyUsersByRoom for ${currentRoomCode}.`);
         }
       }
       
-      // Notify others about WebRTC disconnection
-      socket.to(roomCode).emit('webrtc-user-left', { socketId: socket.id });
+      // Notify others about WebRTC disconnection (from hakob-game-routes)
+      socket.to(currentRoomCode).emit('webrtc-user-left', { socketId: socket.id });
       
       // Use atomic operation to remove player and get updated players list
       const updatedRoom = await Room.findOneAndUpdate(
-        { code: roomCode },
+        { code: currentRoomCode },
         { $pull: { players: { socketId: socket.id } } },
         { new: true } // Return the updated document
       );
       
-      if (!updatedRoom) return;
+      if (!updatedRoom) {
+        // This can happen if the room was already deleted or the player was already removed.
+        console.log(`Room ${currentRoomCode} not found or player ${socket.id} not in it after trying to leave (findOneAndUpdate returned null).`);
+        // Potentially, if the room was deleted by another process (e.g. last player left), this is fine.
+        // If we expect updatedRoom to always exist if currentRoomCode was valid, this might indicate an issue.
+        // For now, we'll just return if no updatedRoom.
+        return;
+      }
       
       // Broadcast updated player list to all clients in the room
-      io.to(roomCode).emit('player-left', { players: updatedRoom.players });
+      io.to(currentRoomCode).emit('player-left', { players: updatedRoom.players });
+
+      // Check for auto-win if a player leaves (from ethan-game-routes)
+      // Pass the main 'io' instance to the helper function
+      await checkAndHandleGameOver(currentRoomCode, io);
+
+      // Delete room if it becomes empty (from ethan-game-routes)
+      if (updatedRoom.players.length === 0) {
+        await Room.deleteOne({ code: currentRoomCode });
+        console.log(`Room ${currentRoomCode} deleted because it became empty after player ${socket.id} left.`);
+      }
+
     } catch (error) {
-      console.error('Error in leave-room handler:', error);
+      console.error(`Error in leave-room handler for room ${currentRoomCode || 'unknown'}:`, error);
     }
   });
 
@@ -379,6 +446,7 @@ io.on('connection', (socket) => {
     console.log(`Relaying ICE candidate from ${from} to ${to} in room ${roomCode || 'N/A'}`);
     io.to(to).emit('ice-candidate', { from, candidate });
   });
+  
 });
 
 
