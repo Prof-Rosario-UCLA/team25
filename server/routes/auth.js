@@ -50,9 +50,10 @@ router.post('/login', async (req, res) => {
   // set token as cookie
   res.cookie('token', token, {
     httpOnly: true, 
-    secure: true, //process.env.NODE_ENV === 'production'
+    secure: true, 
     maxAge: 3600000,
     sameSite: 'none',
+    partitioned: true, // Add the Partitioned attribute
   });
 
   res.json({ message: 'Logged in', token });
