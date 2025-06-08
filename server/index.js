@@ -342,7 +342,13 @@ io.on('connection', (socket) => {
   socket.on('webrtc-signal', ({ to, from, signal, roomCode }) => {
     console.log(`Relaying WebRTC signal from ${from} to ${to}`);
     // Forward the signal to the intended recipient
-    socket.to(to).emit('webrtc-signal', { from, signal });
+    io.to(to).emit('webrtc-signal', { from, signal });
+  });
+
+  // Add a new handler for ICE candidates
+  socket.on('ice-candidate', ({ to, from, candidate }) => {
+    console.log(`Relaying ICE candidate from ${from} to ${to}`);
+    io.to(to).emit('ice-candidate', { from, candidate });
   });
 });
 

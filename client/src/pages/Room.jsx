@@ -6,6 +6,22 @@ import { io } from 'socket.io-client'; // Import Socket.IO client
 import Peer from 'simple-peer'; // Import simple-peer for WebRTC
 import VideoStream from '../components/VideoStream'; // Import our video component
 
+// Add ICE servers configuration for better WebRTC connectivity
+const ICE_SERVERS = {
+  iceServers: [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+    {
+      urls: 'turn:numb.viagenie.ca',
+      username: 'webrtc@live.com',
+      credential: 'muazkh'
+    }
+  ]
+};
+
 // Separate GameOverScreen component for better stability
 const GameOverScreen = ({ winner, onLeave }) => {
     if (!winner) return null;
@@ -235,11 +251,12 @@ const Room = () => {
             // Don't connect to yourself
             if (socketId === currentUserId) return;
             
-            // Create a new peer as the initiator
+            // Create a new peer as the initiator with ICE servers
             const peer = new Peer({
                 initiator: true,
-                trickle: false,
-                stream: localStream
+                trickle: true, // Enable trickle ICE for better connectivity
+                stream: localStream,
+                config: ICE_SERVERS // Add ICE servers
             });
             
             // Handle when peer generates signal data (offer)
@@ -260,6 +277,19 @@ const Room = () => {
                     ...prev,
                     [socketId]: stream
                 }));
+            });
+            
+            // Add connection state event handlers
+            peer.on('connect', () => {
+                console.log(`WebRTC connection established with ${socketId}`);
+            });
+            
+            peer.on('close', () => {
+                console.log(`WebRTC connection closed with ${socketId}`);
+            });
+            
+            peer.on('iceStateChange', (state) => {
+                console.log(`ICE state changed to: ${state} for peer ${socketId}`);
             });
             
             // Handle connection errors
@@ -283,11 +313,12 @@ const Room = () => {
                 // If peer exists, just signal it
                 existingPeer.peer.signal(signal);
             } else {
-                // Create a new peer as the receiver
+                // Create a new peer as the receiver with ICE servers
                 const peer = new Peer({
                     initiator: false,
-                    trickle: false,
-                    stream: localStream
+                    trickle: true, // Enable trickle ICE for better connectivity
+                    stream: localStream,
+                    config: ICE_SERVERS // Add ICE servers
                 });
                 
                 // Handle when peer generates signal data (answer)
@@ -307,6 +338,19 @@ const Room = () => {
                         ...prev,
                         [from]: stream
                     }));
+                });
+                
+                // Add connection state event handlers
+                peer.on('connect', () => {
+                    console.log(`WebRTC connection established with ${from}`);
+                });
+                
+                peer.on('close', () => {
+                    console.log(`WebRTC connection closed with ${from}`);
+                });
+                
+                peer.on('iceStateChange', (state) => {
+                    console.log(`ICE state changed to: ${state} for peer ${from}`);
                 });
                 
                 // Handle connection errors
@@ -352,12 +396,21 @@ const Room = () => {
             }
         });
         
+        // Handle ICE candidates for trickle ICE
+        socketRef.current.on('ice-candidate', ({ from, candidate }) => {
+            console.log(`Received ICE candidate from ${from}`);
+            if (peersRef.current[from] && peersRef.current[from].peer) {
+                peersRef.current[from].peer.signal({ candidate });
+            }
+        });
+        
         // Setup clean-up
         return () => {
             if (socketRef.current) {
                 socketRef.current.off('webrtc-ready');
                 socketRef.current.off('webrtc-signal');
                 socketRef.current.off('webrtc-user-left');
+                socketRef.current.off('ice-candidate');
             }
         };
     }, [localStream, currentUserId, roomCode]);
@@ -504,13 +557,13 @@ const Room = () => {
         }
     };
 
-    // Toggle audio
+    // Toggle audio - Fixed the typo in the function
     const toggleAudio = () => {
         if (localStream) {
             localStream.getAudioTracks().forEach(track => {
                 track.enabled = !track.enabled;
             });
-            setAudioEnabled(!audioAudio);
+            setAudioEnabled(!audioEnabled); // Fixed: was !audioAudio
         }
     };
 
