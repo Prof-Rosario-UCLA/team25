@@ -1,7 +1,7 @@
 import express from 'express';
 import Room from '../models/Room.js';
 import { nanoid } from 'nanoid';
-import redis from '../redis.js'
+// import redis from '../redis.js' // Temporarily disabled Redis
 
 const router = express.Router();
 
@@ -10,41 +10,57 @@ router.post('/create', async (req, res) => {
   const roomCode = nanoid(6).toUpperCase();
   const room = new Room({ code: roomCode, players: [] });
   await room.save();
-  await redis.del('rooms:open');
+  // await redis.del('rooms:open'); // Temporarily disabled Redis
   res.json({ roomCode });
 });
 
 // POST /api/:room/join
 router.post('/:roomCode/join', async (req, res) => {
-  const { username, socketId } = req.body;
-  const room = await Room.findOne({ code: req.params.roomCode });
-  if (!room) return res.status(404).json({ message: 'Room not found' });
-  await redis.set(`room:${req.params.roomCode}`, JSON.stringify(room), 'EX', 300);
+  const { username, socketId, persistentUserId } = req.body; // Added persistentUserId
+  const { roomCode } = req.params;
 
-  // If this player is already in the room, don't add them again
-  const existingPlayer = room.players.find(p => 
-    (socketId && p.socketId === socketId) || 
-    (username && p.username === username)
-  );
-  
-  if (!existingPlayer) {
-    room.players.push({ username, socketId });
+  try {
+    const room = await Room.findOne({ code: roomCode });
+    if (!room) return res.status(404).json({ message: 'Room not found' });
+    // await redis.set(`room:${req.params.roomCode}`, JSON.stringify(room), 'EX', 300); // Temporarily disabled Redis
+
+    // Check if player with this persistentUserId already exists
+    const existingPlayer = room.players.find(p => p.persistentUserId === persistentUserId);
+
+    if (existingPlayer) {
+      // Update existing player's socket ID and username if provided
+      existingPlayer.socketId = socketId;
+      if (username) existingPlayer.username = username;
+    } else {
+      // Add new player
+      const isFirstPlayer = room.players.length === 0;
+      room.players.push({
+        username,
+        socketId,
+        persistentUserId,
+        isHost: isFirstPlayer,
+        isEliminated: false
+      });
+    }
     await room.save();
+    // await redis.del('rooms:open'); // Temporarily disabled Redis
+    // await redis.del(`room:${req.params.roomCode}`); // Temporarily disabled Redis
+    res.json({ success: true, room }); // Return the updated room
+  } catch (error) {
+    console.error(`Error in /${roomCode}/join:`, error);
+    res.status(500).json({ message: 'Server error joining room' });
   }
-  await redis.del('rooms:open');
-  await redis.del(`room:${req.params.roomCode}`);
-  res.json({ success: true });
 });
 
 // GET /api/rooms
 router.get('/', async (req, res) => {
   try {
       // try cache before hitting db
-      const cachedRooms = await redis.get('rooms:open');
-      if (cachedRooms) {
+      // const cachedRooms = await redis.get('rooms:open'); // Temporarily disabled Redis
+      // if (cachedRooms) { // Temporarily disabled Redis
         // console.log('CACHE HIT:', JSON.parse(cachedRooms));
-        return res.json(JSON.parse(cachedRooms));
-      }
+        // return res.json(JSON.parse(cachedRooms)); // Temporarily disabled Redis
+      // } // Temporarily disabled Redis
       const rooms = await Room.find({ gameStarted: false });
       const formattedRooms = rooms.map(room => ({
           id: room._id,
@@ -52,7 +68,7 @@ router.get('/', async (req, res) => {
           players: room.players.length,
       }));
       // cache result for 5 minutes
-      await redis.set('rooms:open', JSON.stringify(formattedRooms), 'EX', 300);
+      // await redis.set('rooms:open', JSON.stringify(formattedRooms), 'EX', 300); // Temporarily disabled Redis
       res.json(formattedRooms);
   } catch (err) {
       console.error('Error fetching rooms:', err);
@@ -65,17 +81,17 @@ router.get('/:roomCode', async (req, res) => {
   const { roomCode } = req.params;
   try {
     // hit cache before db
-    const cacheKey = `room:${roomCode}`;
-    const cachedRoom = await redis.get(cacheKey);
-    if (cachedRoom) {
+    // const cacheKey = `room:${roomCode}`; // Temporarily disabled Redis
+    // const cachedRoom = await redis.get(cacheKey); // Temporarily disabled Redis
+    // if (cachedRoom) { // Temporarily disabled Redis
       // console.log('CACHE HIT:', JSON.parse(cachedRoom));
-      return res.json(JSON.parse(cachedRoom));
-    }
+      // return res.json(JSON.parse(cachedRoom)); // Temporarily disabled Redis
+    // } // Temporarily disabled Redis
     // hit db
-    const room = await Room.findOne({ code: req.params.roomCode });
+    const room = await Room.findOne({ code: roomCode }); // Changed from req.params.roomCode
     if (!room) return res.status(404).json({ message: 'Room not found' });
     // cache result for 5 minutes
-    await redis.set(cacheKey, JSON.stringify(room), 'EX', 300);
+    // await redis.set(cacheKey, JSON.stringify(room), 'EX', 300); // Temporarily disabled Redis
     res.json(room);
   } catch (err) {
     console.error('Error fetching room: ', err);
@@ -85,67 +101,77 @@ router.get('/:roomCode', async (req, res) => {
 
 // POST /api/rooms/:roomCode/leave
 router.post('/:roomCode/leave', async (req, res) => {
-  const { socketId } = req.body;
-  const room = await Room.findOne({ code: req.params.roomCode });
-  if (!room) return res.status(404).json({ message: 'Room not found' });
-  await redis.set(`room:${req.params.roomCode}`, JSON.stringify(room), 'EX', 300);
+  const { socketId } = req.body; // Assuming socketId is sent in the body
+  const { roomCode } = req.params;
+  try {
+    const room = await Room.findOne({ code: roomCode });
+    if (!room) return res.status(404).json({ message: 'Room not found' });
+    // await redis.set(`room:${req.params.roomCode}`, JSON.stringify(room), 'EX', 300); // Temporarily disabled Redis
 
-  room.players = room.players.filter(p => p.socketId !== socketId);
-  await room.save();
-  await redis.del('rooms:open');
-  await redis.del(`room:${req.params.roomCode}`);
-  res.json({ success: true });
+    room.players = room.players.filter(p => p.socketId !== socketId);
+    await room.save();
+    // await redis.del('rooms:open'); // Temporarily disabled Redis
+    // await redis.del(`room:${req.params.roomCode}`); // Temporarily disabled Redis
+    res.json({ success: true });
+  } catch (error) {
+    console.error(`Error in /${roomCode}/leave:`, error);
+    res.status(500).json({ message: 'Server error leaving room' });
+  }
 });
 
 // POST /api/rooms/:roomCode/start
 router.post('/:roomCode/start', async (req, res) => {
-  const room = await Room.findOne({ code: req.params.roomCode });
-  if (!room) return res.status(404).json({ message: 'Room not found' });
-  await redis.set(`room:${req.params.roomCode}`, JSON.stringify(room), 'EX', 300);
+  const { roomCode } = req.params;
+  try {
+    const room = await Room.findOne({ code: roomCode });
+    if (!room) return res.status(404).json({ message: 'Room not found' });
+    // await redis.set(`room:${req.params.roomCode}`, JSON.stringify(room), 'EX', 300); // Temporarily disabled Redis
 
-  // Require at least 2 players to start the game
-  if (room.players.length < 2) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'At least 2 players are required to start the game' 
+    // Require at least 2 players to start the game
+    if (room.players.length < 2) {
+      return res.status(400).json({
+        success: false,
+        message: 'At least 2 players are required to start the game'
+      });
+    }
+
+    // Generate random starting letter
+    const startLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+
+    room.gameStarted = true;
+    room.expectedStartLetter = startLetter;
+    room.currentTurnIndex = 0; // Start with the first player
+    await room.save();
+
+    // Use the io object to emit to all clients in the room
+    req.app.get('io').to(roomCode).emit('game-started', { // Changed from req.params.roomCode
+      expectedStartLetter: startLetter,
+      currentTurnIndex: room.currentTurnIndex, // Send initial turn index
+      players: room.players // Send updated players list
     });
+    // await redis.del(`room:${req.params.roomCode}`); // Temporarily disabled Redis
+    res.json({ success: true, room }); // Return the updated room
+  } catch (error) {
+    console.error(`Error in /${roomCode}/start:`, error);
+    res.status(500).json({ message: 'Server error starting game' });
   }
-
-  // Generate random starting letter
-  const startLetter = String.fromCharCode(65 + Math.floor(Math.random() * 26));
-  
-  room.gameStarted = true;
-  room.expectedStartLetter = startLetter;
-  await room.save();
-
-  // Use the io object to emit to all clients in the room
-  req.app.get('io').to(req.params.roomCode).emit('game-started', { 
-    expectedStartLetter: startLetter 
-  });
-  await redis.del(`room:${req.params.roomCode}`);
-  res.json({ success: true });
 });
 
 // POST /api/rooms/:roomCode/submit-animal
 router.post('/:roomCode/submit-animal', async (req, res) => {
   const { animal } = req.body;
-  
+  const { roomCode } = req.params;
+
   try {
-    // Find the room
-    let room = false;
-    console.log('CACHE HIT');
-    if (room) {
-      room = JSON.parse(room);
-    } else {
-      room = await Room.findOne({ code: req.params.roomCode });
-      if (!room) return res.status(404).json({ message: 'Room not found' });
-    }
+    // Find the room directly from DB
+    const room = await Room.findOne({ code: roomCode });
+    if (!room) return res.status(404).json({ message: 'Room not found' });
 
     // Only update the animal and letter
     // The socket handler will handle turn changes
     await Room.findOneAndUpdate(
-      { code: req.params.roomCode },
-      { 
+      { code: roomCode },
+      {
         currentAnimal: animal,
         expectedStartLetter: animal.slice(-1).toUpperCase()
       }
@@ -161,19 +187,25 @@ router.post('/:roomCode/submit-animal', async (req, res) => {
 // POST /api/rooms/:roomCode/eliminate
 router.post('/:roomCode/eliminate', async (req, res) => {
   const { socketId } = req.body;
-  
+  const { roomCode } = req.params;
+
   try {
-    const room = await Room.findOne({ code: req.params.roomCode });
-    if (!room) return res.status(404).json({ message: 'Room not found' });
-    await redis.set(`room:${req.params.roomCode}`, JSON.stringify(room), 'EX', 300);
+    // const room = await Room.findOne({ code: roomCode }); // Not strictly needed if just updating
+    // if (!room) return res.status(404).json({ message: 'Room not found' }); // Temporarily disabled Redis
+    // await redis.set(`room:${req.params.roomCode}`, JSON.stringify(room), 'EX', 300); // Temporarily disabled Redis
 
     // Use findOneAndUpdate to avoid version conflicts
-    await Room.findOneAndUpdate(
-      { code: req.params.roomCode, "players.socketId": socketId },
-      { $set: { "players.$.isEliminated": true } }
+    const updatedRoom = await Room.findOneAndUpdate(
+      { code: roomCode, "players.socketId": socketId },
+      { $set: { "players.$.isEliminated": true } },
+      { new: true } // Return the updated document
     );
-    await redis.del(`room:${req.params.roomCode}`);
-    res.json({ success: true });
+
+    if (!updatedRoom) {
+      return res.status(404).json({ message: 'Room or player not found for elimination.' });
+    }
+    // await redis.del(`room:${req.params.roomCode}`); // Temporarily disabled Redis
+    res.json({ success: true, room: updatedRoom });
   } catch (error) {
     console.error('Error eliminating player:', error);
     res.status(500).json({ message: 'Server error' });
