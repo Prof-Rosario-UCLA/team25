@@ -10,8 +10,8 @@ import roomRoutes from './routes/rooms.js';
 import { Server } from 'socket.io';
 import Room from './models/Room.js';
 
-// Add this near the top where you define other variables
-const webrtcReadyUsers = {};  // Map of roomCode -> array of socketIds
+// Use a more descriptive name: roomCode -> Set of socketIds
+const webrtcReadyUsersByRoom = {}; 
 
 // Load environment variables
 dotenv.config();
@@ -140,29 +140,31 @@ io.on('connection', (socket) => {
   });
 
   // Updated leave-room handler with WebRTC cleanup
-  socket.on('leave-room', async (roomCode) => {
+  socket.on('leave-room', async (data) => { // Ensure data can be object or string
     try {
-      // If roomCode is an object, extract the roomCode property
-      const actualRoomCode = typeof roomCode === 'object' ? roomCode.roomCode : roomCode;
+      const roomCode = typeof data === 'object' ? data.roomCode : data;
+      if (!roomCode) {
+        console.error(`Leave-room event for ${socket.id} missing roomCode.`);
+        return;
+      }
       
-      socket.leave(actualRoomCode);
-      console.log(`${socket.id} left room ${actualRoomCode}`);
+      socket.leave(roomCode);
+      console.log(`${socket.id} left room ${roomCode}`);
       
-      // Remove this user from the webrtcReadyUsers list
-      if (webrtcReadyUsers[actualRoomCode]) {
-        webrtcReadyUsers[actualRoomCode] = webrtcReadyUsers[actualRoomCode].filter(id => id !== socket.id);
-        // Clean up empty rooms
-        if (webrtcReadyUsers[actualRoomCode].length === 0) {
-          delete webrtcReadyUsers[actualRoomCode];
+      // Remove this user from the webrtcReadyUsersByRoom list for that room
+      if (webrtcReadyUsersByRoom[roomCode]) {
+        webrtcReadyUsersByRoom[roomCode].delete(socket.id);
+        if (webrtcReadyUsersByRoom[roomCode].size === 0) {
+          delete webrtcReadyUsersByRoom[roomCode];
         }
       }
       
       // Notify others about WebRTC disconnection
-      socket.to(actualRoomCode).emit('webrtc-user-left', { socketId: socket.id });
+      socket.to(roomCode).emit('webrtc-user-left', { socketId: socket.id });
       
       // Use atomic operation to remove player and get updated players list
       const updatedRoom = await Room.findOneAndUpdate(
-        { code: actualRoomCode },
+        { code: roomCode },
         { $pull: { players: { socketId: socket.id } } },
         { new: true } // Return the updated document
       );
@@ -170,7 +172,7 @@ io.on('connection', (socket) => {
       if (!updatedRoom) return;
       
       // Broadcast updated player list to all clients in the room
-      io.to(actualRoomCode).emit('player-left', { players: updatedRoom.players });
+      io.to(roomCode).emit('player-left', { players: updatedRoom.players });
     } catch (error) {
       console.error('Error in leave-room handler:', error);
     }
@@ -290,64 +292,91 @@ io.on('connection', (socket) => {
   socket.on('disconnect', () => {
     console.log(`Client disconnected: ${socket.id}`);
     
-    // Clean up webrtcReadyUsers for all rooms this user was in
-    Object.keys(webrtcReadyUsers).forEach(roomCode => {
-      if (webrtcReadyUsers[roomCode].includes(socket.id)) {
-        webrtcReadyUsers[roomCode] = webrtcReadyUsers[roomCode].filter(id => id !== socket.id);
+    // Clean up webrtcReadyUsersByRoom for all rooms this user was in
+    for (const roomCode in webrtcReadyUsersByRoom) {
+      if (webrtcReadyUsersByRoom[roomCode].has(socket.id)) {
+        webrtcReadyUsersByRoom[roomCode].delete(socket.id);
+        console.log(`Removed ${socket.id} from webrtcReadyUsersByRoom for ${roomCode} on disconnect.`);
         
         // Notify others in this room about WebRTC disconnection
         socket.to(roomCode).emit('webrtc-user-left', { socketId: socket.id });
         
-        // Clean up empty rooms
-        if (webrtcReadyUsers[roomCode].length === 0) {
-          delete webrtcReadyUsers[roomCode];
+        // Clean up empty room entries from the map
+        if (webrtcReadyUsersByRoom[roomCode].size === 0) {
+          delete webrtcReadyUsersByRoom[roomCode];
+          console.log(`Cleaned up empty webrtcReadyUsersByRoom for ${roomCode} on disconnect.`);
         }
       }
-    });
-    
-    // Notify all rooms this socket was in about the disconnection
-    const rooms = [...socket.rooms].filter(room => room !== socket.id);
-    rooms.forEach(room => {
-      socket.to(room).emit('webrtc-user-left', { socketId: socket.id });
+    }
+    // The rest of your disconnect logic for game state can remain
+    // (e.g., notifying rooms about player leaving for game logic, not just WebRTC)
+    const rooms = [...socket.rooms].filter(room => room !== socket.id); // Get rooms socket was in
+    rooms.forEach(async roomCode => { // Iterate over each room
+        try {
+            // This part is similar to 'leave-room' but for disconnect
+            const updatedRoom = await Room.findOneAndUpdate(
+                { code: roomCode },
+                { $pull: { players: { socketId: socket.id } } },
+                { new: true }
+            );
+            if (updatedRoom) {
+                io.to(roomCode).emit('player-left', { players: updatedRoom.players });
+                // Potentially handle game logic if a player disconnects mid-game
+                // For example, check if the game needs to end or turn needs to change
+            }
+        } catch (error) {
+            console.error(`Error handling disconnect for room ${roomCode}:`, error);
+        }
     });
   });
 
   // Updated WebRTC signaling handler with user tracking
   socket.on('webrtc-ready', ({ roomCode }) => {
+    if (!roomCode) {
+      console.error(`User ${socket.id} sent webrtc-ready without a roomCode.`);
+      return;
+    }
     console.log(`User ${socket.id} is ready for WebRTC in room ${roomCode}`);
     
-    // Initialize the room's ready users array if it doesn't exist
-    if (!webrtcReadyUsers[roomCode]) {
-      webrtcReadyUsers[roomCode] = [];
+    // Initialize the room's ready users set if it doesn't exist
+    if (!webrtcReadyUsersByRoom[roomCode]) {
+      webrtcReadyUsersByRoom[roomCode] = new Set();
     }
     
-    // Store this user as ready for WebRTC
-    if (!webrtcReadyUsers[roomCode].includes(socket.id)) {
-      webrtcReadyUsers[roomCode].push(socket.id);
-    }
+    // Get other users already ready in this room BEFORE adding the current user
+    const otherReadyUsersInThisRoom = Array.from(webrtcReadyUsersByRoom[roomCode]);
+
+    // Add current user to the set of ready users for this room
+    // Do this after fetching others, so current user doesn't get their own ready event from this emission
+    webrtcReadyUsersByRoom[roomCode].add(socket.id);
     
-    // Notify all OTHER users in the room that this user is ready
-    socket.to(roomCode).emit('webrtc-ready', { socketId: socket.id });
+    // Notify all OTHER users (who were already ready) in the room that this new user (socket.id) is ready
+    otherReadyUsersInThisRoom.forEach(readyUserId => {
+      // No need to check readyUserId !== socket.id, as otherReadyUsersInThisRoom was populated before current user was added
+      io.to(readyUserId).emit('webrtc-ready', { socketId: socket.id, roomCode });
+      console.log(`Notified ${readyUserId} that new user ${socket.id} is ready in ${roomCode}`);
+    });
     
-    // Notify THIS user about all other ready users
-    const otherReadyUsers = webrtcReadyUsers[roomCode].filter(id => id !== socket.id);
-    if (otherReadyUsers.length > 0) {
-      console.log(`Informing new user ${socket.id} about existing ready users:`, otherReadyUsers);
-      otherReadyUsers.forEach(readyUserId => {
-        socket.emit('webrtc-ready', { socketId: readyUserId });
+    // Notify THIS new user (socket.id) about all other users who were already ready
+    if (otherReadyUsersInThisRoom.length > 0) {
+      console.log(`Informing new user ${socket.id} about existing ready users in ${roomCode}:`, otherReadyUsersInThisRoom);
+      otherReadyUsersInThisRoom.forEach(readyUserId => {
+        socket.emit('webrtc-ready', { socketId: readyUserId, roomCode });
       });
     }
   });
 
   socket.on('webrtc-signal', ({ to, from, signal, roomCode }) => {
-    console.log(`Relaying WebRTC signal from ${from} to ${to}`);
+    // roomCode is not strictly needed for direct signaling if 'to' is a socketId,
+    // but good to have for logging or potential future routing.
+    console.log(`Relaying WebRTC signal from ${from} to ${to} in room ${roomCode || 'N/A'}`);
     // Forward the signal to the intended recipient
     io.to(to).emit('webrtc-signal', { from, signal });
   });
 
-  // Add a new handler for ICE candidates
-  socket.on('ice-candidate', ({ to, from, candidate }) => {
-    console.log(`Relaying ICE candidate from ${from} to ${to}`);
+  // Add a new handler for ICE candidates (if you're using trickle ICE)
+  socket.on('ice-candidate', ({ to, from, candidate, roomCode }) => {
+    console.log(`Relaying ICE candidate from ${from} to ${to} in room ${roomCode || 'N/A'}`);
     io.to(to).emit('ice-candidate', { from, candidate });
   });
 });
