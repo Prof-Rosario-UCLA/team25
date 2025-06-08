@@ -36,14 +36,35 @@ const Lobby = () => {
     }
     checkAuth();
     }, []); // Add navigate to dependency array
+
+    useEffect(() => {
+        const fetchRooms = async () => {
+            try {
+                const res = await fetch(`${import.meta.env.VITE_API_URL}/api/rooms`, {
+                    method: 'GET',
+                    credentials: 'include',
+                });
+                if (!res.ok) throw new Error('Failed to fetch rooms');
+                const data = await res.json();
+                setRooms(data);
+            } catch (err) {
+                console.error('Error fetching rooms:', err);
+            }
+        };
     
-      if (loading) {
-        return (
-          <main className="flex items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
-            <div className="text-green-800 text-2xl">Loading...</div>
-          </main>
-        );
-      }
+        fetchRooms();
+        const interval = setInterval(fetchRooms, 10000); // refresh every 5 sec
+    
+        return () => clearInterval(interval);
+    }, []);
+    
+    if (loading) {
+    return (
+        <main className="flex items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
+        <div className="text-green-800 text-2xl">Loading...</div>
+        </main>
+    );
+    }
     
 
 
