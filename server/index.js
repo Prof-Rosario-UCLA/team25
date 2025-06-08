@@ -10,7 +10,8 @@ import roomRoutes from './routes/rooms.js';
 import { Server } from 'socket.io';
 import Room from './models/Room.js';
 
-
+// Add this near the top where you define other variables
+const webrtcReadyUsers = {};  // Map of roomCode -> array of socketIds
 
 // Load environment variables
 dotenv.config();
@@ -138,6 +139,7 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Updated leave-room handler with WebRTC cleanup
   socket.on('leave-room', async (roomCode) => {
     try {
       // If roomCode is an object, extract the roomCode property
@@ -145,6 +147,18 @@ io.on('connection', (socket) => {
       
       socket.leave(actualRoomCode);
       console.log(`${socket.id} left room ${actualRoomCode}`);
+      
+      // Remove this user from the webrtcReadyUsers list
+      if (webrtcReadyUsers[actualRoomCode]) {
+        webrtcReadyUsers[actualRoomCode] = webrtcReadyUsers[actualRoomCode].filter(id => id !== socket.id);
+        // Clean up empty rooms
+        if (webrtcReadyUsers[actualRoomCode].length === 0) {
+          delete webrtcReadyUsers[actualRoomCode];
+        }
+      }
+      
+      // Notify others about WebRTC disconnection
+      socket.to(actualRoomCode).emit('webrtc-user-left', { socketId: socket.id });
       
       // Use atomic operation to remove player and get updated players list
       const updatedRoom = await Room.findOneAndUpdate(
@@ -272,8 +286,63 @@ io.on('connection', (socket) => {
     }
   });
 
+  // Updated disconnect handler with WebRTC cleanup
   socket.on('disconnect', () => {
     console.log(`Client disconnected: ${socket.id}`);
+    
+    // Clean up webrtcReadyUsers for all rooms this user was in
+    Object.keys(webrtcReadyUsers).forEach(roomCode => {
+      if (webrtcReadyUsers[roomCode].includes(socket.id)) {
+        webrtcReadyUsers[roomCode] = webrtcReadyUsers[roomCode].filter(id => id !== socket.id);
+        
+        // Notify others in this room about WebRTC disconnection
+        socket.to(roomCode).emit('webrtc-user-left', { socketId: socket.id });
+        
+        // Clean up empty rooms
+        if (webrtcReadyUsers[roomCode].length === 0) {
+          delete webrtcReadyUsers[roomCode];
+        }
+      }
+    });
+    
+    // Notify all rooms this socket was in about the disconnection
+    const rooms = [...socket.rooms].filter(room => room !== socket.id);
+    rooms.forEach(room => {
+      socket.to(room).emit('webrtc-user-left', { socketId: socket.id });
+    });
+  });
+
+  // Updated WebRTC signaling handler with user tracking
+  socket.on('webrtc-ready', ({ roomCode }) => {
+    console.log(`User ${socket.id} is ready for WebRTC in room ${roomCode}`);
+    
+    // Initialize the room's ready users array if it doesn't exist
+    if (!webrtcReadyUsers[roomCode]) {
+      webrtcReadyUsers[roomCode] = [];
+    }
+    
+    // Store this user as ready for WebRTC
+    if (!webrtcReadyUsers[roomCode].includes(socket.id)) {
+      webrtcReadyUsers[roomCode].push(socket.id);
+    }
+    
+    // Notify all OTHER users in the room that this user is ready
+    socket.to(roomCode).emit('webrtc-ready', { socketId: socket.id });
+    
+    // Notify THIS user about all other ready users
+    const otherReadyUsers = webrtcReadyUsers[roomCode].filter(id => id !== socket.id);
+    if (otherReadyUsers.length > 0) {
+      console.log(`Informing new user ${socket.id} about existing ready users:`, otherReadyUsers);
+      otherReadyUsers.forEach(readyUserId => {
+        socket.emit('webrtc-ready', { socketId: readyUserId });
+      });
+    }
+  });
+
+  socket.on('webrtc-signal', ({ to, from, signal, roomCode }) => {
+    console.log(`Relaying WebRTC signal from ${from} to ${to}`);
+    // Forward the signal to the intended recipient
+    socket.to(to).emit('webrtc-signal', { from, signal });
   });
 });
 

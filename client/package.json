@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "devhost": "vite --host",
     "build": "vite build",
     "postbuild": "cp app.yaml dist/",
     "lint": "eslint .",
@@ -16,6 +17,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-router-dom": "^7.6.1",
+    "simple-peer": "^9.11.1",
     "socket.io-client": "^4.8.1",
     "tailwindcss": "^4.1.8"
   },
