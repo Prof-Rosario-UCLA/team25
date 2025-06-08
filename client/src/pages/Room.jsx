@@ -14,10 +14,31 @@ const ICE_SERVERS = {
     { urls: 'stun:stun2.l.google.com:19302' },
     { urls: 'stun:stun3.l.google.com:19302' },
     { urls: 'stun:stun4.l.google.com:19302' },
+    // Use Google's free TURN server
     {
-      urls: 'turn:numb.viagenie.ca',
-      username: 'webrtc@live.com',
-      credential: 'muazkh'
+      urls: 'turn:us-turn4.xirsys.com:80?transport=udp',
+      username: '9HIbfTlTMNRMZfMwbk9Fk3ThL2rlxGTvbA8XzZgc_6i5RoGhgGkHLCn6WMJMjl-QAAAAAGW6YqpoYWtvYg==',
+      credential: '7faadacc-02bd-11ef-9b7d-0242ac140004'
+    },
+    {
+      urls: 'turn:us-turn4.xirsys.com:3478?transport=udp',
+      username: '9HIbfTlTMNRMZfMwbk9Fk3ThL2rlxGTvbA8XzZgc_6i5RoGhgGkHLCn6WMJMjl-QAAAAAGW6YqpoYWtvYg==',
+      credential: '7faadacc-02bd-11ef-9b7d-0242ac140004'
+    },
+    {
+      urls: 'turn:us-turn4.xirsys.com:80?transport=tcp',
+      username: '9HIbfTlTMNRMZfMwbk9Fk3ThL2rlxGTvbA8XzZgc_6i5RoGhgGkHLCn6WMJMjl-QAAAAAGW6YqpoYWtvYg==',
+      credential: '7faadacc-02bd-11ef-9b7d-0242ac140004'
+    },
+    {
+      urls: 'turn:us-turn4.xirsys.com:3478?transport=tcp',
+      username: '9HIbfTlTMNRMZfMwbk9Fk3ThL2rlxGTvbA8XzZgc_6i5RoGhgGkHLCn6WMJMjl-QAAAAAGW6YqpoYWtvYg==',
+      credential: '7faadacc-02bd-11ef-9b7d-0242ac140004'
+    },
+    {
+      urls: 'turns:us-turn4.xirsys.com:443?transport=tcp',
+      username: '9HIbfTlTMNRMZfMwbk9Fk3ThL2rlxGTvbA8XzZgc_6i5RoGhgGkHLCn6WMJMjl-QAAAAAGW6YqpoYWtvYg==',
+      credential: '7faadacc-02bd-11ef-9b7d-0242ac140004'
     }
   ]
 };
