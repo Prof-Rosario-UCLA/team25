@@ -13,22 +13,22 @@ const ICE_SERVERS = {
       urls: "stun:stun.relay.metered.ca:80",
     },
     {
-      urls: "turn:global.relay.metered.ca:80",
+      urls: "turn:standard.relay.metered.ca:80",
       username: "31cfe41599e682ee040758a1",
       credential: "otMFqqBiUzsAGZH0",
     },
     {
-      urls: "turn:global.relay.metered.ca:80?transport=tcp",
+      urls: "turn:standard.relay.metered.ca:80?transport=tcp",
       username: "31cfe41599e682ee040758a1",
       credential: "otMFqqBiUzsAGZH0",
     },
     {
-      urls: "turn:global.relay.metered.ca:443",
+      urls: "turn:standard.relay.metered.ca:443",
       username: "31cfe41599e682ee040758a1",
       credential: "otMFqqBiUzsAGZH0",
     },
     {
-      urls: "turns:global.relay.metered.ca:443?transport=tcp",
+      urls: "turns:standard.relay.metered.ca:443?transport=tcp",
       username: "31cfe41599e682ee040758a1",
       credential: "otMFqqBiUzsAGZH0",
     },
