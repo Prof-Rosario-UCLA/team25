@@ -1,1 +1,6 @@
 @import "tailwindcss";
+
+body {
+  overflow: hidden; /* Prevents scrollbars on the body */
+  overscroll-behavior: none; /* Prevents "pull-to-refresh" or overscroll navigation */
+}

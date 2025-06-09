@@ -1,6 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 
+
+
 const Login = () => {
     const navigate = useNavigate();
 
@@ -10,7 +12,6 @@ const Login = () => {
         const username = event.target.username.value;
         const password = event.target.password.value;
 
-        // Basic validation
         if (!username || !password) {
             alert("Please fill in all fields.");
             return;
@@ -22,12 +23,13 @@ const Login = () => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            credentials: 'include', // Important for cookies
+            credentials: 'include', 
             body: JSON.stringify({ username, password }),
         })
         .then(response => {
             if (response.ok) {
-                navigate('/lobby'); // Redirect to lobby on success
+                localStorage.setItem('username', username); // Store username in local storage
+                navigate('/lobby'); // Redirect to lobby 
             } else {
                 response.json().then(data => {
                     alert("Login failed.");
@@ -47,7 +49,7 @@ const Login = () => {
         try {
         const response = await fetch(`${import.meta.env.VITE_API_URL}/api/auth/check`, {
             method: 'GET',
-            credentials: 'include', // Important for cookies
+            credentials: 'include', 
         });
         
         if (response.ok) {
@@ -63,46 +65,46 @@ const Login = () => {
         }
     }
     checkAuth();
-    }, []);
+    }, [navigate]); 
 
     if (loading) {
     return (
-        <main className="flex items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100">
-        <div className="text-green-800 text-2xl">Loading...</div>
+        <main className="flex items-center justify-center min-h-screen bg-gradient-to-b from-green-50 to-green-100 p-4">
+        <div className="text-green-800 text-xl sm:text-2xl">Loading...</div>
         </main>
     );
     }
     
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen p-4 md:p-6 lg:p-8 bg-gray-50">
-      <section className="bg-white rounded-lg shadow-md p-6 lg:p-8 w-full max-w-md flex flex-col items-center">
-        <header className="text-center w-full">
-          <h1 className="text-3xl font-bold mb-6">Welcome Back</h1>
-          <p className="text-gray-600 mb-8">Log in to continue to LoopZoo!</p>
+    <main className="flex flex-col items-center justify-center min-h-screen p-4 bg-gradient-to-b from-green-50 to-green-100">
+      <section className="bg-white rounded-xl shadow-lg p-4 py-6 sm:p-6 md:p-8 w-full max-w-md flex flex-col items-center">
+        <header className="text-center w-full mb-4 sm:mb-6">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Welcome Back</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-2">Log in to continue to LoopZoo!</p>
         </header>
         
         <form className="login-form w-full" onSubmit={handleSubmit}>
-          <fieldset className="mb-6">
+          <fieldset className="mb-4 sm:mb-5">
             <legend className="sr-only">Login Information</legend>
             
-            <div className="form-group mb-4">
-              <label htmlFor="username" className="block mb-2 font-medium">Username</label>
+            <div className="form-group mb-3 sm:mb-4">
+              <label htmlFor="username" className="block mb-1.5 text-sm sm:text-base font-medium text-gray-700">Username</label>
               <input 
                 id="username" 
                 name="username"
-                className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" 
+                className="w-full border border-gray-300 p-2 sm:p-2.5 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm sm:text-base" 
                 required 
               />
             </div>
             
-            <div className="form-group mb-4">
-              <label htmlFor="password" className="block mb-2 font-medium">Password</label>
+            <div className="form-group mb-4 sm:mb-5">
+              <label htmlFor="password" className="block mb-1.5 text-sm sm:text-base font-medium text-gray-700">Password</label>
               <input 
                 type="password" 
                 id="password" 
                 name="password"
-                className="w-full border border-gray-300 p-2 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none" 
+                className="w-full border border-gray-300 p-2 sm:p-2.5 rounded-md focus:ring-2 focus:ring-green-500 focus:border-green-500 outline-none text-sm sm:text-base" 
                 required 
               />
             </div>
@@ -111,14 +113,14 @@ const Login = () => {
           
           <button 
             type="submit" 
-            className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition-colors w-full font-medium"
+            className="bg-green-600 hover:bg-green-700 text-white py-2 sm:py-2.5 px-4 rounded-lg transition-colors w-full font-medium text-sm sm:text-base shadow-sm"
           >
             Log In
           </button>
         </form>
         
-        <footer className="w-full text-center mt-8">
-          <p>Don't have an account? <a href="/signup" className="text-green-600 hover:underline">Sign Up</a></p>
+        <footer className="w-full text-center mt-6 sm:mt-8">
+          <p className="text-sm sm:text-base text-gray-600">Don't have an account? <Link to="/signup" className="text-green-600 hover:text-green-700 hover:underline font-medium">Sign Up</Link></p>
         </footer>
       </section>
     </main>

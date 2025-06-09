@@ -50,9 +50,10 @@ router.post('/login', async (req, res) => {
   // set token as cookie
   res.cookie('token', token, {
     httpOnly: true, 
-    secure: false, //process.env.NODE_ENV === 'production'
+    secure: true, 
     maxAge: 3600000,
-    sameSite: 'strict',
+    sameSite: 'none',
+    partitioned: true, // Add the Partitioned attribute
   });
 
   res.json({ message: 'Logged in', token });
@@ -69,7 +70,12 @@ router.get('/check', authenticateToken, (req, res) => {
 
 // Logout
 router.post('/logout', (req, res) => {
-  res.clearCookie('token');
+  res.clearCookie('token',{
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    partitioned: true,
+  });
   res.json({ message: 'Logged out' });
 });
 

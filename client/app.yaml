@@ -1,26 +1,30 @@
-runtime: nodejs20
-
+runtime: nodejs20 # This is fine, GAE can serve static files with it.
 instance_class: F1
-
 service: client
 
-automatic_scaling:
-  max_instances: 3 
-
 handlers:
-  - url: /static
-    static_dir: static
+  - url: /assets
+    static_dir: assets 
     secure: always
+    http_headers:
+      Vary: Accept-Encoding
+      Cache-Control: public, max-age=31536000 # Cache for 1 year
 
-  - url: /(.*\.(json|ico|js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))$
-    static_files: \1
-    upload: .*\.(json|ico|js|css|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$
+  - url: /(.*\.(?:js|json|ico|png|webmanifest|xml|txt|svg))$
+    static_files: \1 
+    upload: (.*\.(?:js|json|ico|png|webmanifest|xml|txt|svg))$ 
     secure: always
+    http_headers:
+      Cache-Control: public, max-age=3600 # Cache for 1 hour
 
+  # SPA Fallback
   - url: /.*
-    static_files: index.html
+    static_files: index.html # dist/index.html
     upload: index.html
     secure: always
+    # Prevent caching of index.html
+    http_headers:
+      Cache-Control: no-cache, no-store, must-revalidate, max-age=0
 
 env_variables:
   NODE_ENV: 'production'
