@@ -76,7 +76,7 @@ const Home = () => {
         </div>
         
         <footer className="mt-16 text-gray-600">
-          <p className="text-sm">© 2025 LoopZoo. All rights reserved.</p>
+          <p className="text-sm">LoopZoo. Hakob Atajyan and Ethan Dao, CS144 Spring 2025</p>
         </footer>
       </section>
     </main>
