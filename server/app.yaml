@@ -1,23 +1,9 @@
 runtime: nodejs20
-instance_class: F1 # Or your desired instance class
-service: server   # Or your specific service name for the server
+instance_class: F1
+service: server
 
 env_variables:
   NODE_ENV: 'production'
-  # MONGO_URI, CLIENT_URL, REDIS_HOST, REDIS_PORT, REDIS_PASSWORD (if any)
-  # will be loaded from the .env file created by the GitHub Actions workflow.
-  # Your Node.js application (using dotenv) will pick these up.
-  # GAE also injects a PORT environment variable that your app should listen on.
-
-# --- IMPORTANT: For GAE Standard Environment connecting to Memorystore ---
-# 1. Create a Serverless VPC Access connector in the GCP console.
-#    Ensure it's in the SAME REGION as your GAE app and Memorystore instance.
-#    (VPC Network > Serverless VPC Access)
-# 2. Uncomment and fill in the following lines with your project details:
-#
-vpc_access_connector:
-  name: "projects/cs144-25s-hakob3215/locations/us-west1/connectors/cs144-connector" # EXAMPLE: Replace with your actual Project ID, Region, and Connector Name
-network: {} # This empty network tag is required when using a VPC Access Connector
 
 handlers:
   - url: /.*
@@ -26,6 +12,6 @@ handlers:
 
 # Optional: Configure scaling settings as needed
 automatic_scaling:
-  min_instances: 0 # Set to 1 or more for production to avoid cold starts
-  max_instances: 1 # Adjust based on expected load
+  min_instances: 0 
+  max_instances: 1 
   target_cpu_utilization: 0.65

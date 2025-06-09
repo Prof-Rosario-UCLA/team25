@@ -3,42 +3,28 @@ instance_class: F1
 service: client
 
 handlers:
-  # Handler for assets in the 'assets' directory (e.g., /assets/index-XXXX.js)
-  # This maps URL path /assets/... to physical path dist/assets/...
   - url: /assets
-    static_dir: assets # Serve files from the 'assets' subdirectory within dist
+    static_dir: assets 
     secure: always
-    # Optional: Add caching headers for assets
     http_headers:
       Vary: Accept-Encoding
       Cache-Control: public, max-age=31536000 # Cache for 1 year
 
-  # Handler for other static files in the root of 'dist'
-  # (e.g., favicon.ico, manifest.webmanifest, registerSW.js, sw.js)
-  # Ensure all necessary extensions are listed.
-  # The (?:...) is a non-capturing group.
   - url: /(.*\.(?:js|json|ico|png|webmanifest|xml|txt|svg))$
-    static_files: \1 # Serve the matched file from the root of 'dist'
-    upload: (.*\.(?:js|json|ico|png|webmanifest|xml|txt|svg))$ # Ensure these files are uploaded
+    static_files: \1 
+    upload: (.*\.(?:js|json|ico|png|webmanifest|xml|txt|svg))$ 
     secure: always
     http_headers:
       Cache-Control: public, max-age=3600 # Cache for 1 hour
 
-  # SPA Fallback: All other requests serve index.html
-  # This ensures client-side routing works.
+  # SPA Fallback
   - url: /.*
-    static_files: index.html # Serves dist/index.html
-    upload: index.html       # Ensures index.html is uploaded
+    static_files: index.html # dist/index.html
+    upload: index.html
     secure: always
-    # Prevent caching of index.html itself to ensure users get the latest version
-    # when new assets are deployed. The assets themselves are long-cached.
+    # Prevent caching of index.html
     http_headers:
       Cache-Control: no-cache, no-store, must-revalidate, max-age=0
 
 env_variables:
   NODE_ENV: 'production'
-
-# Note: Ensure your .gcloudignore in the client/dist directory (or client directory if gcloud operates from there before cd)
-# does not accidentally ignore these assets. Typically, for a 'dist' deployment,
-# .gcloudignore might not be strictly necessary in 'dist' itself if you deploy everything from 'dist'.
-# If you have a .gcloudignore in the root 'client' folder, make sure it doesn't affect 'dist' contents.

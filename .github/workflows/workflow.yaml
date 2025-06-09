@@ -38,20 +38,10 @@ jobs:
           # Get MongoDB URI from Secret Manager
           gcloud secrets versions access latest --secret="mongodb-uri" > mongodb-uri.txt
           
-          # Get Redis details from Secret Manager
-          gcloud secrets versions access latest --secret="redis-host" > redis-host.txt
-          gcloud secrets versions access latest --secret="redis-port" > redis-port.txt
-          # If you have a password, uncomment the next line and ensure the secret exists in GCP Secret Manager
-          # gcloud secrets versions access latest --secret="redis-password" > redis-password.txt
-          
           # Set up server environment variables
           echo "MONGO_URI=$(cat mongodb-uri.txt)" > server/.env
           echo "PORT=8080" >> server/.env # GAE will set PORT, but good for consistency
           echo "CLIENT_URL=https://client-dot-cs144-25s-hakob3215.uw.r.appspot.com" >> server/.env
-          echo "REDIS_HOST=$(cat redis-host.txt)" >> server/.env
-          echo "REDIS_PORT=$(cat redis-port.txt)" >> server/.env
-          # If you have a password, uncomment the next line
-          # echo "REDIS_PASSWORD=$(cat redis-password.txt)" >> server/.env
           echo "NODE_ENV=production" >> server/.env # Good practice to set NODE_ENV
 
           # Set up client environment variables
@@ -91,11 +81,9 @@ jobs:
         id: deploy-client
         uses: google-github-actions/deploy-appengine@v2
         with:
-          working_directory: ./client/dist # <-- CHANGE THIS
-          deliverables: app.yaml # This will now use client/dist/app.yaml
+          working_directory: ./client/dist
+          deliverables: app.yaml 
           project_id: ${{ secrets.GCP_PROJECT }}
-          # Ensure your client/app.yaml correctly points to the 'dist' folder for static assets if needed
-          # or that your build process places app.yaml in client/dist
 
       # Deploy server to GAE
       - name: Deploy server to App Engine
