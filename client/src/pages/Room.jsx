@@ -1031,7 +1031,7 @@ const Room = () => {
                     <>
                         <div className="text-center mb-8">
                             <h2 className="text-3xl font-bold text-gray-800 mb-2">Current Word</h2>
-                            <div className="bg-green-100 p-6 rounded-lg">
+                            <div className="bg-green-100 p-6 rounded-lg" aria-live="polite">
                                 <p className="text-4xl font-bold text-green-800">
                                     {currentAnimal ? currentAnimal : expectedStartLetter ? `Start with "${expectedStartLetter}"` : "Waiting..."}
                                 </p>
@@ -1065,7 +1065,7 @@ const Room = () => {
                             >
                                 Submit
                             </button>
-                            {error && <p className="mt-2 text-red-600">{error}</p>}
+                            {error && <p className="mt-2 text-red-600" role="alert">{error}</p>}
                         </div>
 
                         {uniquePlayers.length > 0 && currentPlayer && (
