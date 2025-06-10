@@ -42,7 +42,8 @@ function getCache(key) {
  * Deletes a value from the cache.
  * @param {string} key - The cache key.
  */
-function delCache(key) {
+// Export delCache
+export function delCache(key) {
   const entry = appCache.get(key);
   if (entry && entry.timeoutId) {
     clearTimeout(entry.timeoutId);
@@ -51,13 +52,14 @@ function delCache(key) {
   return deleted;
 }
 
-const CACHE_KEYS = {
+// Export CACHE_KEYS
+export const CACHE_KEYS = {
   OPEN_ROOMS: 'rooms:open', // For the list of all available rooms
   ROOM_PREFIX: 'room:',     // Prefix for individual room data
 };
 
 /**
- * Helper function to convert a Mongoose Room document (and its subdocuments)
+ * Helper function to convert a Mongoose Room document
  * into a standardized plain JavaScript object.
  * @param {import('mongoose').Document} roomDocument - The Mongoose document for a room.
  * @returns {object|null} A plain JavaScript object representing the room, or null.
@@ -76,7 +78,6 @@ function toPlainRoomObject(roomDocument) {
         // If p is a Mongoose subdocument
         playerObj = p.toObject({ virtuals: true });
       } else if (p) {
-        // If p is already somewhat plain or needs to be cloned
         playerObj = { ...p };
       }
       // Ensure _id is stringified if present in player subdocument
@@ -88,11 +89,9 @@ function toPlainRoomObject(roomDocument) {
     });
   }
 
-  // Ensure top-level _id is stringified and available as 'id' for consistency
   if (roomDocument._id) {
     plainRoom.id = roomDocument._id.toString();
   }
-  // Remove Mongoose version key __v if present and not needed
   delete plainRoom.__v;
 
   return plainRoom;
@@ -139,8 +138,9 @@ router.post('/:roomCode/join', async (req, res) => {
     }
     const savedRoom = await room.save();
     
-    delCache(roomCacheKey); // Invalidate specific room cache
-    delCache(CACHE_KEYS.OPEN_ROOMS); // Invalidate open rooms list (player count changed)
+    // invalidate the cache
+    delCache(roomCacheKey); 
+    delCache(CACHE_KEYS.OPEN_ROOMS); 
 
     const plainRoomResponse = toPlainRoomObject(savedRoom);
     res.json({ success: true, room: plainRoomResponse });
@@ -209,7 +209,7 @@ router.post('/:roomCode/leave', async (req, res) => {
     
     delCache(roomCacheKey); 
     delCache(CACHE_KEYS.OPEN_ROOMS); 
-    res.json({ success: true }); // No room data needed in response here
+    res.json({ success: true }); 
   } catch (error) {
     console.error(`Error in /${roomCode}/leave:`, error);
     res.status(500).json({ message: 'Server error leaving room' });
@@ -276,7 +276,6 @@ router.post('/:roomCode/submit-animal', async (req, res) => {
     }
     
     delCache(roomCacheKey); 
-    // No need to return full room data, socket event will handle UI update
     res.json({ success: true }); 
   } catch (error)
 {

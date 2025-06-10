@@ -6,11 +6,11 @@ import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import authRouter, { authenticateToken } from './routes/auth.js';
 import animalRoutes from './routes/animals.js';
-import roomRoutes from './routes/rooms.js';
+import roomRoutes, { delCache, CACHE_KEYS } from './routes/rooms.js';
 import { Server } from 'socket.io';
 import Room from './models/Room.js';
 
-// Use a more descriptive name: roomCode -> Set of socketIds
+
 const webrtcReadyUsersByRoom = {}; 
 
 // Load environment variables
@@ -133,6 +133,8 @@ io.on('connection', (socket) => {
       
       // Broadcast updated player list to all clients in the room
       io.to(roomCode).emit('player-joined', { players: updatedRoom.players });
+      delCache(CACHE_KEYS.OPEN_ROOMS); // Invalidate open rooms list
+      delCache(`${CACHE_KEYS.ROOM_PREFIX}${roomCode}`); // Invalidate specific room cache
     } catch (error) {
       console.error('Error in join-room handler:', error);
     }
@@ -144,12 +146,10 @@ io.on('connection', (socket) => {
     
       // Ensure room exists and game has started
       if (!room || !room.gameStarted) {
-        // console.log(`Game over check for room ${roomCodeToCheck}: Room not found or game not started.`);
         return;
       }
     
       // Filter for active (not eliminated) players
-      // Ensuring consistency with 'isEliminated' field used elsewhere
       const activePlayers = room.players.filter(player => !player.isEliminated);
     
       // Check if only one player remains and the game had multiple players initially
@@ -168,11 +168,13 @@ io.on('connection', (socket) => {
             winner: {
               socketId: winner.socketId,
               username: winner.username,
-              isHost: winner.isHost // Assuming isHost is relevant for the client
+              isHost: winner.isHost
             }
           });
+          // clean cache
+          delCache(CACHE_KEYS.OPEN_ROOMS);
+          delCache(`${CACHE_KEYS.ROOM_PREFIX}${roomCodeToCheck}`);
       } else {
-        // console.log(`Game over check for room ${roomCodeToCheck}: ${activePlayers.length} active players. No winner yet.`);
       }
     } catch (error) {
       console.error(`Error in checkAndHandleGameOver for room ${roomCodeToCheck}:`, error);
@@ -181,9 +183,9 @@ io.on('connection', (socket) => {
 
   // Merged 'leave-room' handler
   socket.on('leave-room', async (data) => {
-    let currentRoomCode; // To store the processed room code
+    let currentRoomCode; // store the processed room code
     try {
-      // Determine roomCode (from hakob-game-routes, handles object or string)
+      // Determine roomCode
       // Added a null check for data if it's an object
       if (typeof data === 'object' && data !== null && data.roomCode) {
         currentRoomCode = data.roomCode;
@@ -211,7 +213,7 @@ io.on('connection', (socket) => {
       // Notify others about WebRTC disconnection (from hakob-game-routes)
       socket.to(currentRoomCode).emit('webrtc-user-left', { socketId: socket.id });
       
-      // Use atomic operation to remove player and get updated players list
+      // remove player and get updated players list
       const updatedRoom = await Room.findOneAndUpdate(
         { code: currentRoomCode },
         { $pull: { players: { socketId: socket.id } } },
@@ -219,25 +221,25 @@ io.on('connection', (socket) => {
       );
       
       if (!updatedRoom) {
-        // This can happen if the room was already deleted or the player was already removed.
         console.log(`Room ${currentRoomCode} not found or player ${socket.id} not in it after trying to leave (findOneAndUpdate returned null).`);
-        // Potentially, if the room was deleted by another process (e.g. last player left), this is fine.
-        // If we expect updatedRoom to always exist if currentRoomCode was valid, this might indicate an issue.
-        // For now, we'll just return if no updatedRoom.
         return;
       }
       
       // Broadcast updated player list to all clients in the room
       io.to(currentRoomCode).emit('player-left', { players: updatedRoom.players });
+      delCache(CACHE_KEYS.OPEN_ROOMS); // Invalidate open rooms list
+      delCache(`${CACHE_KEYS.ROOM_PREFIX}${currentRoomCode}`);
+
 
       // Check for auto-win if a player leaves (from ethan-game-routes)
-      // Pass the main 'io' instance to the helper function
       await checkAndHandleGameOver(currentRoomCode, io);
 
       // Delete room if it becomes empty (from ethan-game-routes)
       if (updatedRoom.players.length === 0) {
         await Room.deleteOne({ code: currentRoomCode });
         console.log(`Room ${currentRoomCode} deleted because it became empty after player ${socket.id} left.`);
+        delCache(CACHE_KEYS.OPEN_ROOMS); // Room deleted, update open rooms list
+        delCache(`${CACHE_KEYS.ROOM_PREFIX}${currentRoomCode}`);
       }
 
     } catch (error) {
@@ -283,6 +285,7 @@ io.on('connection', (socket) => {
       
       // Notify all clients about turn change
       io.to(roomCode).emit('turn-changed', { currentTurnIndex: nextTurnIndex });
+      delCache(`${CACHE_KEYS.ROOM_PREFIX}${roomCode}`); // Animal submission changes room state
     } catch (error) {
       console.error('Error in submit-animal handler:', error);
     }
@@ -301,10 +304,12 @@ io.on('connection', (socket) => {
       const room = await Room.findOne({ code: roomCode });
       if (!room) return;
       
-      // STEP 1: Broadcast elimination to all clients
+      // Broadcast elimination to all clients
       io.to(roomCode).emit('player-eliminated', { socketId });
+      delCache(CACHE_KEYS.OPEN_ROOMS); // Player elimination might affect player count in open rooms list
+      delCache(`${CACHE_KEYS.ROOM_PREFIX}${roomCode}`);
       
-      // STEP 2: Check if game is over (only one active player left)
+      // Check if game is over (only one active player left)
       const activePlayers = room.players.filter(p => !p.isEliminated);
       if (activePlayers.length === 1 && room.players.length > 1) {
         // Game over - emit winner event and update room state
@@ -323,7 +328,7 @@ io.on('connection', (socket) => {
             isHost: winner.isHost
           }
         });
-        return; // IMPORTANT: Return early, don't process turn change
+        return; 
       }
       
       // If current player was eliminated, advance turn
@@ -349,6 +354,7 @@ io.on('connection', (socket) => {
         
         // Notify all clients about turn change
         io.to(roomCode).emit('turn-changed', { currentTurnIndex: nextIndex });
+        delCache(`${CACHE_KEYS.ROOM_PREFIX}${roomCode}`); // Turn change updates room state
       }
     } catch (error) {
       console.error('Error in player-eliminated handler:', error);
@@ -376,11 +382,9 @@ io.on('connection', (socket) => {
       }
     }
     // The rest of your disconnect logic for game state can remain
-    // (e.g., notifying rooms about player leaving for game logic, not just WebRTC)
     const rooms = [...socket.rooms].filter(room => room !== socket.id); // Get rooms socket was in
     rooms.forEach(async roomCode => { // Iterate over each room
         try {
-            // This part is similar to 'leave-room' but for disconnect
             const updatedRoom = await Room.findOneAndUpdate(
                 { code: roomCode },
                 { $pull: { players: { socketId: socket.id } } },
@@ -388,8 +392,16 @@ io.on('connection', (socket) => {
             );
             if (updatedRoom) {
                 io.to(roomCode).emit('player-left', { players: updatedRoom.players });
-                // Potentially handle game logic if a player disconnects mid-game
-                // For example, check if the game needs to end or turn needs to change
+                delCache(CACHE_KEYS.OPEN_ROOMS); // Player disconnected, update open rooms list
+                delCache(`${CACHE_KEYS.ROOM_PREFIX}${roomCode}`);
+                await checkAndHandleGameOver(roomCode, io); // Check for game over on disconnect
+
+                if (updatedRoom.players.length === 0) {
+                  await Room.deleteOne({ code: roomCode });
+                  console.log(`Room ${roomCode} deleted because it became empty after player ${socket.id} disconnected.`);
+                  delCache(CACHE_KEYS.OPEN_ROOMS); // Room deleted, update open rooms list
+                  delCache(`${CACHE_KEYS.ROOM_PREFIX}${roomCode}`);
+                }
             }
         } catch (error) {
             console.error(`Error handling disconnect for room ${roomCode}:`, error);
@@ -413,18 +425,14 @@ io.on('connection', (socket) => {
     // Get other users already ready in this room BEFORE adding the current user
     const otherReadyUsersInThisRoom = Array.from(webrtcReadyUsersByRoom[roomCode]);
 
-    // Add current user to the set of ready users for this room
-    // Do this after fetching others, so current user doesn't get their own ready event from this emission
     webrtcReadyUsersByRoom[roomCode].add(socket.id);
     
-    // Notify all OTHER users (who were already ready) in the room that this new user (socket.id) is ready
+    // Notify all OTHER users
     otherReadyUsersInThisRoom.forEach(readyUserId => {
-      // No need to check readyUserId !== socket.id, as otherReadyUsersInThisRoom was populated before current user was added
       io.to(readyUserId).emit('webrtc-ready', { socketId: socket.id, roomCode });
       console.log(`Notified ${readyUserId} that new user ${socket.id} is ready in ${roomCode}`);
     });
     
-    // Notify THIS new user (socket.id) about all other users who were already ready
     if (otherReadyUsersInThisRoom.length > 0) {
       console.log(`Informing new user ${socket.id} about existing ready users in ${roomCode}:`, otherReadyUsersInThisRoom);
       otherReadyUsersInThisRoom.forEach(readyUserId => {
@@ -434,14 +442,12 @@ io.on('connection', (socket) => {
   });
 
   socket.on('webrtc-signal', ({ to, from, signal, roomCode }) => {
-    // roomCode is not strictly needed for direct signaling if 'to' is a socketId,
-    // but good to have for logging or potential future routing.
     console.log(`Relaying WebRTC signal from ${from} to ${to} in room ${roomCode || 'N/A'}`);
     // Forward the signal to the intended recipient
     io.to(to).emit('webrtc-signal', { from, signal });
   });
 
-  // Add a new handler for ICE candidates (if you're using trickle ICE)
+  // Add a new handler for ICE candidates
   socket.on('ice-candidate', ({ to, from, candidate, roomCode }) => {
     console.log(`Relaying ICE candidate from ${from} to ${to} in room ${roomCode || 'N/A'}`);
     io.to(to).emit('ice-candidate', { from, candidate });

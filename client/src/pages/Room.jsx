@@ -247,7 +247,7 @@ const Room = () => {
             }
             // Do not clear timer on unmount if user might come back to same game session
         };
-    }, [roomCode]); // localStream removed as setupCamera is called within
+    }, [roomCode]); 
 
     // WebRTC signaling
     useEffect(() => {
@@ -419,8 +419,6 @@ const Room = () => {
             if (!gameWinner && isCurrentUser && currentPlayer && !isPlayerEliminated(currentPlayer) && !eliminationInProgress.current && socketRef.current?.connected) {
                 eliminationInProgress.current = true;
                 socketRef.current.emit('player-eliminated', { roomCode, socketId: currentPlayer.socketId });
-                // Timer for this turn is up, no need to keep its localStorage key
-                // localStorage.removeItem(`timerEndTime_${roomCode}`); // Or let new turn overwrite it
             }
             return; // Stop interval if time is up
         }
@@ -437,9 +435,6 @@ const Room = () => {
                     setTimeLeft(prev => Math.max(0, prev - 1));
                 }
             } else {
-                // If no endTime, might be start of game/turn before localStorage is set by event
-                // Or if it was cleared unexpectedly. For safety, decrement locally.
-                // This path should ideally not be hit frequently if events set localStorage correctly.
                 setTimeLeft(prev => Math.max(0, prev - 1));
             }
         }, 1000);
@@ -492,7 +487,6 @@ const Room = () => {
                 }
                 setInputAnimal('');
                 setError('');
-                // usedAnimals will be updated via the 'animal-submitted' socket event
             } else {
                 setError(res.data.message);
                 setTimeout(() => setError(''), 3000);
@@ -568,7 +562,7 @@ const Room = () => {
                             <div className="text-center mb-3 sm:mb-4">
                                 <h2 className="text-base sm:text-lg md:text-xl font-bold text-gray-800 mb-1 sm:mb-1.5">Current Word</h2>
                                 <div className="bg-green-100 p-2 sm:p-3 rounded-lg">
-                                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-800 break-all">{currentAnimal || (expectedStartLetter ? `Start with "${expectedStartLetter}"` : "...")}</p>
+                                    <p className="text-lg sm:text-xl md:text-2xl font-bold text-green-800 break-all">{(currentAnimal ? currentAnimal.toUpperCase() : null) || (expectedStartLetter ? `Start with "${expectedStartLetter}"` : "...")}</p>
                                 </div>
                             </div>
                             <div className="mt-2 sm:mt-3 text-center">
