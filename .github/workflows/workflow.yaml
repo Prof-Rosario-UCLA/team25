@@ -40,9 +40,9 @@ jobs:
           
           # Set up server environment variables
           echo "MONGO_URI=$(cat mongodb-uri.txt)" > server/.env
-          echo "PORT=8080" >> server/.env # GAE will set PORT, but good for consistency
+          echo "PORT=8080" >> server/.env
           echo "CLIENT_URL=https://client-dot-cs144-25s-hakob3215.uw.r.appspot.com" >> server/.env
-          echo "NODE_ENV=production" >> server/.env # Good practice to set NODE_ENV
+          echo "NODE_ENV=production" >> server/.env
 
           # Set up client environment variables
           echo "VITE_API_URL=https://server-dot-cs144-25s-hakob3215.uw.r.appspot.com" > client/.env.production
