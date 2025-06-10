@@ -27,14 +27,8 @@ Create a .env file in /client with:
 VITE_API_URL=http://localhost:3000
 ### 3. Deploy the app on Google App Engine
 - This project is configured to run on Google App Engine. We deploy the client and server side separately.
-- Backend:  
-cd server  
-gcloud app deploy  
-- Frontend:  
-cd client  
-npm install  
-npm run build  
-gcloud app deploy app.yaml  
+- Backend:  cd server, gcloud app deploy  
+- Frontend:  cd client, npm install, npm run build, gcloud app deploy app.yaml  
 
 ## REST API Documentation
 
