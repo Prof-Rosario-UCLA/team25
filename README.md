@@ -16,25 +16,25 @@ https://docs.google.com/document/d/1tt77zfyClT2exlRyw-0cnS-bsVAfziNd21VLNcDW3lU/
 ## Deployment Instructions
 
 ### 1. Clone the repository
-- git clone https://github.com/Prof-Rosario-UCLA/team25.git
-- cd team25
+git clone https://github.com/Prof-Rosario-UCLA/team25.git  
+cd team25
 ### 2. Create environmental variables
-Create a .env file in /server with 
-- MONGO_URI=mongodb+srv://hatajyan:HHrUmvlTCqTrt0zC@in-quiz-itive.findqlm.mongodb.net/?retryWrites=true&w=majority&appName=In-quiz-itive
-- JWT_SECRET=*hidden for security*
-- PORT=3000
-Create a .env file in /client with
-- VITE_API_URL=http://localhost:3000
+Create a .env file in /server with:    
+MONGO_URI=mongodb+srv://hatajyan:HHrUmvlTCqTrt0zC@in-quiz-itive.findqlm.mongodb.net/?retryWrites=true&w=majority&appName=In-quiz-itive  
+JWT_SECRET=*hidden for security*  
+PORT=3000  
+Create a .env file in /client with:  
+VITE_API_URL=http://localhost:3000
 ### 3. Deploy the app on Google App Engine
-- This project is configured to run on Google App Engine. We deploy the client and server side.
-- Backend:
-- cd server
-- gcloud app deploy
-- Frontend:
-- cd client
-- npm install
-- npm run build
-- gcloud app deploy app.yaml
+- This project is configured to run on Google App Engine. We deploy the client and server side separately.
+- Backend:  
+cd server  
+gcloud app deploy  
+- Frontend:  
+cd client  
+npm install  
+npm run build  
+gcloud app deploy app.yaml  
 
 ## REST API Documentation
 
@@ -83,8 +83,8 @@ Create a .env file in /client with
 - Response: { "success": true, "room": { ...roomData } }
 
 ### GET /api/rooms
-Get a list of all rooms that haven't started yet.
-Response: 
+- Get a list of all rooms that haven't started yet.
+- Response: 
 [
   { "id": "abc123", "code": "RKLSJD", "players": 3 },
   ...
@@ -92,38 +92,38 @@ Response:
 ]
 
 ### GET /api/rooms/:roomCode
-Fetches the data for a specific room.
-Response: Full room object (long, in JSON format)
+- Fetches the data for a specific room.
+- Response: Full room object (long, in JSON format)
 
 ### POST /api/rooms/:roomCode/leave
-Remove a player from the room using their socketId.
-Request body:
+- Remove a player from the room using their socketId.
+- Request body:
 { "socketId": "abc123" }
-Response: { "success": true }
+- Response: { "success": true }
 
 ### POST /api/rooms/:roomCode/start
-Start the game by checking requirements (like if the room has at least 2 players) and set the different values accordingly in the database.
-Response: { "success": true, "room": { ... } }
+- Start the game by checking requirements (like if the room has at least 2 players) and set the different values accordingly in the database.
+- Response: { "success": true, "room": { ... } }
 
 ### POST /api/rooms/:roomCode/submit-animal
-Save the current animal that a player submits.
-Request body:
+- Save the current animal that a player submits.
+- Request body:
 { "animal": "Elephant" }
-Response: { "success": true }
+- Response: { "success": true }
 
 ### POST /api/rooms/:roomCode/eliminate
-Mark a player as eliminated.
-Request body:
+- Mark a player as eliminated.
+- Request body:
 { "socketId": "abc123" }
-Response: { "success": true, "room": { ...updatedRoom } }
+- Response: { "success": true, "room": { ...updatedRoom } }
 
 ### POST /api/animals/check
-Check whether a submitted animal is a valid answer (starts with the required letter, or the letter that the previous animal ended with)
-Request body:
+- Check whether a submitted animal is a valid answer (starts with the required letter, or the letter that the previous animal ended with)
+- Request body:
 {
   "animal": "Dog",
   "requiredStartLetter": "D"
 }
-Response: { "valid": true }
+- Response: { "valid": true }
 
 
