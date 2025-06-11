@@ -1,6 +1,6 @@
 # LoopZoo
 
-LoopZoo is a full-stack web application that lets users play a chaining game with animals, which we built with React, Express, MongoDB, Redis, and deployed on Google App Engine. Users can create accounts and join rooms where they can play with other players, create their own rooms with generated join codes, and enable and disable video and audio access. We implemented authentication using cookies with JWT, video streaming using web sockets, and PWA functionalities with a manifest.json file. 
+LoopZoo is a full-stack web application that lets users play a chaining game with animals, which we built with React, Express, MongoDB, and deployed on Google App Engine. Users can create accounts and join rooms where they can play with other players, create their own rooms with generated join codes, and enable and disable video and audio access. We implemented authentication using cookies with JWT, video streaming using web sockets + WebRTC, and PWA functionalities with a manifest.json file. 
 ---
 
 You can find the paper explaining how we satisfied the spec items here: 
@@ -19,16 +19,15 @@ https://docs.google.com/document/d/1tt77zfyClT2exlRyw-0cnS-bsVAfziNd21VLNcDW3lU/
 git clone https://github.com/Prof-Rosario-UCLA/team25.git  
 cd team25
 ### 2. Create environmental variables
-Create a .env file in /server with:    
-MONGO_URI=mongodb+srv://hatajyan:HHrUmvlTCqTrt0zC@in-quiz-itive.findqlm.mongodb.net/?retryWrites=true&w=majority&appName=In-quiz-itive  
-JWT_SECRET=*hidden for security*  
+Create a .env file in /server with:   
+
+MONGO_URI=...  
+JWT_SECRET=...  
 PORT=3000  
 Create a .env file in /client with:  
 VITE_API_URL=http://localhost:3000
 ### 3. Deploy the app on Google App Engine
-- This project is configured to run on Google App Engine. We deploy the client and server side separately.
-- Backend:  cd server, gcloud app deploy  
-- Frontend:  cd client, npm install, npm run build, gcloud app deploy app.yaml  
+- We deploy the client and server side separately, as different services. Refer to workflow.yaml for the GAE deployment.
 
 ## REST API Documentation
 
