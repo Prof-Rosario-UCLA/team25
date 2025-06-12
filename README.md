@@ -1,6 +1,6 @@
 # LoopZoo
 
-LoopZoo is a full-stack web application that lets users play a chaining game with animals, which we built with React, Express, MongoDB, and deployed on Google App Engine. Users can create accounts and join rooms where they can play with other players, create their own rooms with generated join codes, and enable and disable video and audio access. We implemented authentication using cookies with JWT, video streaming using web sockets + WebRTC, and PWA functionalities with a manifest.json file. 
+LoopZoo is a full-stack web application that lets users play a chaining game with animals, which we built with React, Express, MongoDB, and deployed on Google App Engine. Users can create accounts and join rooms where they can play with other players, create their own rooms with generated join codes, and enable and disable video and audio access. We implemented authentication using cookies with JWT, video streaming using web sockets + WebRTC, and PWA functionalities with a manifest.json file. Deployed at: https://client-dot-cs144-25s-hakob3215.uw.r.appspot.com/
 ---
 
 You can find the paper explaining how we satisfied the spec items here: 
